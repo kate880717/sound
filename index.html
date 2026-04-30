@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>소리 탐험대</title>
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+        :root {
+            --bg-deep: #f0e6ff;
+            --neon-blue: #6366f1;
+            --neon-pink: #ec4899;
+            --neon-green: #10b981;
+            --header-h: 12vh;
+            --main-h: 68vh;
+            --footer-h: 20vh;
+        }
+
+        body {
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 50%, #fbc2eb 100%);
+            background-attachment: fixed;
+            color: #2d3748;
+            overflow: hidden;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .star {
+            display: none;
+        }
+
+        .text-huge {
+            font-size: clamp(1.8rem, 5.5vh, 3.5rem);
+            line-height: 1.2;
+        }
+
+        .text-large {
+            font-size: clamp(1.3rem, 4vh, 2.5rem);
+        }
+
+        .text-medium {
+            font-size: clamp(1.1rem, 3.2vh, 1.8rem);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            width: 100%;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 36px;
+            width: 36px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+            margin-top: -12px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 12px;
+            background: linear-gradient(90deg, #c4b5fd, #f9a8d4);
+            border-radius: 20px;
+        }
+
+        .neon-glow {
+            text-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+            color: #4338ca;
+        }
+
+        .neon-glow-pink {
+            text-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+            color: #db2777;
+        }
+
+        .neon-glow-green {
+            text-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+            color: #059669;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            padding: 0.5rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .content-area {
+            display: flex;
+            flex-direction: row;
+            height: var(--main-h);
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2rem;
+            min-height: 0;
+        }
+
+        .grid-box {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 2.8rem;
+            padding: 1.8vh;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1 / 1;
+            width: min(14.5vh, 18vw);
+            max-width: 140px;
+            max-height: 140px;
+            border-radius: 1.8rem;
+        }
+
+        .instrument-card {
+            width: min(16vh, 22vw);
+            max-width: 150px;
+            padding: 0.8rem;
+            border-radius: 1.6rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // ==========================================
+        // 🚀 구글 앱스 스크립트 배포 후 나온 웹앱 URL을 아래에 붙여넣으세요!
+        // ==========================================
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwE4cXnPyYcBOwsWcjlit2jJawm-mZ-jcrS-fR0-ovCXcWnw9rfq6yDNJ3OL0k99AY/exec'; // 예: 'https://script.google.com/macros/s/.../exec'
+
+        const api = {
+            request: async (action, data = {}) => {
+                if (!GAS_URL) {
+                    console.log('Mock mode (No GAS_URL):', action, data);
+                    if (action === 'getStudents') return { ok: true, students: [{ no: 1, name: '홍길동 (테스트)' }, { no: 2, name: '김민준 (테스트)' }] };
+                    if (action === 'getQuestions') return {
+                        ok: true, questions: [
+                            { stage: 1, title: '1단계: 쿵짝쿵짝', guide: '악기 선택 → 빈칸 클릭 = 채우기\n다시 클릭 = 지우기\n[연주▶] = 전체 음악 듣기' },
+                            { stage: 2, title: '2단계: 악기 바꾸기', guide: '박자는 그대로!\n악기만 바꿔서 느낌 비교해보세요!' },
+                            { stage: 3, title: '3단계: 섞어보기', guide: '여러 악기를 함께 넣어보세요!\n소리가 풍부해져요!\n[음악녹음]으로 저장 → [발표]로 설명!' }
+                        ]
+                    };
+                    if (action === 'saveRecording') return new Promise(r => setTimeout(() => r({ ok: true, fileUrl: 'http://mock-url' }), 1000));
+                    return { ok: true };
+                }
+                try {
+                    const res = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action, ...data }),
+                    });
+                    return await res.json();
+                } catch (e) {
+                    console.error('API Error:', e);
+                    return { ok: false, error: e.message };
+                }
+            },
+            getStudents: () => api.request('getStudents'),
+            getQuestions: () => api.request('getQuestions'),
+            saveRecording: (data) => api.request('saveRecording', data),
+            saveData: (data) => api.request('saveData', data)
+        };
+
+        // --- TTS (speakerOn 전역 ref로 체크) ---
+        const speakerRef = React.createRef();
+        speakerRef.current = false;
+        const speak = (text, rate = 0.9, pitch = 1.1) => {
+            if (!speakerRef.current) return;
+            if (typeof window === 'undefined' || !window.speechSynthesis) return;
+            const synth = window.speechSynthesis;
+            if (synth.speaking) synth.cancel();
+            const utterThis = new SpeechSynthesisUtterance(text);
+            const voices = synth.getVoices();
+            let voice = voices.find(v => v.lang === 'ko-KR' && v.name.includes('Google'));
+            if (!voice) voice = voices.find(v => v.lang === 'ko-KR');
+            if (voice) utterThis.voice = voice;
+            utterThis.rate = rate; utterThis.pitch = pitch;
+            synth.speak(utterThis);
+        };
+
+        // --- UI Components ---
+        const PencilFairy = ({ scale = 1 }) => (
+            <motion.div animate={{ y: [0, -12, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} style={{ transform: `scale(${scale})` }}>
+                <svg width="100" height="120" viewBox="0 0 120 150" fill="none">
+                    <path d="M45 55C25 45 15 75 30 85C15 95 20 115 40 105" stroke="#A0AEC0" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M75 55C95 45 105 75 90 85C105 95 100 115 80 105" stroke="#A0AEC0" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M45 30L75 30V110L60 135L45 110V30Z" fill="#F6AD55" stroke="#4A5568" strokeWidth="2" />
+                    <path d="M45 110L60 135L75 110H45Z" fill="#FBD38D" stroke="#4A5568" strokeWidth="2" />
+                    <path d="M45 15C45 10 75 10 75 15V30H45V15Z" fill="#FBB6CE" stroke="#4A5568" strokeWidth="2" />
+                    <circle cx="53" cy="65" r="2" fill="#2D3748" /><circle cx="67" cy="65" r="2" fill="#2D3748" />
+                </svg>
+            </motion.div>
+        );
+
+        const SpeakerBtn = ({ onClick, size = "large" }) => (
+            <button onClick={(e) => { e.stopPropagation(); onClick(); }} className={`${size === "large" ? "p-4" : "p-2"} bg-indigo-600 rounded-full border-2 border-white/40 shadow-xl active:scale-90 transition-all`}>
+                <svg width={size === "large" ? "30" : "18"} height={size === "large" ? "30" : "18"} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+            </button>
+        );
+
+        const InstIcon = ({ type }) => {
+            switch (type) {
+                case 'drum': return (
+                    <svg viewBox="0 0 100 100" className="w-full h-full p-2">
+                        <ellipse cx="50" cy="30" rx="40" ry="12" fill="#fff7ed" stroke="#7c2d12" strokeWidth="3" />
+                        <rect x="10" y="30" width="80" height="35" fill="#ea580c" />
+                        <ellipse cx="50" cy="65" rx="40" ry="12" fill="#9a3412" />
+                        <line x1="20" y1="10" x2="40" y2="25" stroke="#facc15" strokeWidth="4" strokeLinecap="round" />
+                        <line x1="80" y1="10" x2="60" y2="25" stroke="#facc15" strokeWidth="4" strokeLinecap="round" />
+                    </svg>
+                );
+                case 'triangle': return (
+                    <svg viewBox="0 0 100 100" className="w-full h-full p-3">
+                        <path d="M50 15 L85 85 L15 85 Z" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinejoin="round" />
+                        <circle cx="50" cy="15" r="4" fill="#94a3b8" />
+                        <line x1="75" y1="50" x2="95" y2="30" stroke="#78716c" strokeWidth="6" strokeLinecap="round" />
+                    </svg>
+                );
+                case 'tambourine': return (
+                    <svg viewBox="0 0 100 100" className="w-full h-full p-2">
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="#fde047" strokeWidth="8" />
+                        <circle cx="25" cy="30" r="6" fill="#cbd5e1" /><circle cx="75" cy="30" r="6" fill="#cbd5e1" />
+                        <circle cx="25" cy="70" r="6" fill="#cbd5e1" /><circle cx="75" cy="70" r="6" fill="#cbd5e1" />
+                        <circle cx="50" cy="15" r="6" fill="#cbd5e1" /><circle cx="50" cy="85" r="6" fill="#cbd5e1" />
+                        <circle cx="15" cy="50" r="6" fill="#cbd5e1" /><circle cx="85" cy="50" r="6" fill="#cbd5e1" />
+                    </svg>
+                );
+                case 'castanets': return (
+                    <svg viewBox="0 0 100 100" className="w-full h-full p-2">
+                        <path d="M 25 50 A 25 25 0 0 1 75 50 Z" fill="#dc2626" />
+                        <path d="M 25 52 A 25 25 0 0 0 75 52 Z" fill="#991b1b" />
+                        <circle cx="50" cy="51" r="5" fill="#451a03" />
+                        <path d="M 50 25 L 50 15 A 10 10 0 0 0 30 15 L 30 25" fill="none" stroke="#fde047" strokeWidth="4" />
+                    </svg>
+                );
+                default: return null;
+            }
+        };
+
+        const INSTRUMENTS = [
+            { id: 'drum', name: '작은 북', color: 'bg-orange-500', note: 'C2' },
+            { id: 'triangle', name: '트라이앵글', color: 'bg-slate-300', note: 'C8' },
+            { id: 'tambourine', name: '탬버린', color: 'bg-yellow-400', note: '8n' },
+            { id: 'castanets', name: '캐스터네츠', color: 'bg-red-500', note: 'C5' }
+        ];
+
+        const RecorderUI = ({ title, onDone, onNext, autoNext }) => {
+            const [recording, setRecording] = useState(false);
+            const [done, setDone] = useState(false);
+            const [displayText, setDisplayText] = useState('');
+            const textRef = useRef('');
+            const mediaRecorder = useRef(null);
+            const chunks = useRef([]);
+            const srRef = useRef(null);
+            const streamRef = useRef(null);
+
+            const toggleRec = async () => {
+                if (recording) {
+                    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') mediaRecorder.current.stop();
+                    if (srRef.current) try { srRef.current.stop(); } catch (e) { }
+                    setRecording(false);
+                    return;
+                }
+                chunks.current = [];
+                await Tone.start();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamRef.current = stream;
+                mediaRecorder.current = new window.MediaRecorder(stream);
+                mediaRecorder.current.ondataavailable = e => chunks.current.push(e.data);
+                mediaRecorder.current.onstop = () => {
+                    const blob = new Blob(chunks.current, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setDone(true);
+                        try { onDone(reader.result.split(',')[1], textRef.current); } catch (e) { }
+                    };
+                    reader.readAsDataURL(blob);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                mediaRecorder.current.start();
+                setRecording(true);
+
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    const sr = new SpeechRecognition();
+                    sr.lang = 'ko-KR'; sr.interimResults = true; sr.continuous = true;
+                    sr.onresult = e => {
+                        const t = Array.from(e.results).map(r => r[0].transcript).join('');
+                        textRef.current = t;
+                        setDisplayText(t);
+                    };
+                    srRef.current = sr;
+                    try { sr.start(); } catch (e) { }
+                }
+            };
+
+            useEffect(() => {
+                if (done && autoNext && onNext) {
+                    const t = setTimeout(() => onNext(), 1500);
+                    return () => clearTimeout(t);
+                }
+            }, [done, autoNext, onNext]);
+
+            return (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/70 backdrop-blur-xl p-10 rounded-[3rem] border-2 border-white/80 shadow-xl text-center max-w-xl w-full">
+                    <h2 className="text-huge font-bold mb-6 neon-glow">{title}</h2>
+                    {!done ? (
+                        <button onClick={toggleRec} className={`w-36 h-36 rounded-full flex items-center justify-center mx-auto transition-all ${recording ? 'bg-red-400 animate-pulse scale-110 shadow-lg' : 'bg-indigo-500 hover:bg-indigo-400 shadow-lg'}`}>
+                            <span className="text-6xl">{recording ? '⏹' : '🎤'}</span>
+                        </button>
+                    ) : (
+                        <div className="w-36 h-36 rounded-full bg-emerald-400 flex items-center justify-center mx-auto shadow-lg">
+                            <span className="text-6xl">✅</span>
+                        </div>
+                    )}
+                    <p className="mt-8 text-large min-h-[40px]">{recording ? "녹음 중! 잠시만 기다려요..." : done ? (autoNext ? "잘했어요! 넘어갈게요..." : "저장 완료!") : "마이크를 눌러 말해보세요!"}</p>
+                    <p className="mt-4 text-medium text-slate-500 min-h-[30px]">{displayText}</p>
+                    {done && !autoNext && <button onClick={() => onNext && onNext()} className="mt-6 px-10 py-4 rounded-full bg-indigo-500 text-white font-bold text-large shadow-lg active:scale-95">다음으로 →</button>}
+                </motion.div>
+            );
+        };
+
+        // --- App Component ---
+        const App = () => {
+            const [view, setView] = useState('login');
+            const [students, setStudents] = useState([]);
+            const [questions, setQuestions] = useState([]);
+            const [student, setStudent] = useState(null);
+
+            const [stage, setStage] = useState(1); // 1, 2, 3
+            const [grid, setGrid] = useState(Array(4).fill(null).map(() => Array(4).fill(null)));
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [currentStep, setCurrentStep] = useState(-1);
+            const [bpm, setBpm] = useState(90);
+            const [selectedInst, setSelectedInst] = useState('drum');
+            const [feedback, setFeedback] = useState("");
+
+            const [showGuide, setShowGuide] = useState(false);
+            const [speakerOn, setSpeakerOn] = useState(false);
+            const [isMusicRecording, setIsMusicRecording] = useState(false);
+
+            const [sessionData, setSessionData] = useState({});
+
+            const synths = useRef({});
+            const loopRef = useRef(null);
+            const gridRef = useRef(grid);
+            const recorderRef = useRef(null);
+
+            useEffect(() => { speakerRef.current = speakerOn; }, [speakerOn]);
+
+            useEffect(() => {
+                api.getStudents().then(res => { if (res.ok) setStudents(res.students) });
+                api.getQuestions().then(res => { if (res.ok) setQuestions(res.questions) });
+
+                synths.current = {
+                    drum: new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.001, decay: 0.3, sustain: 0.01 } }).toDestination(),
+                    triangle: new Tone.FMSynth({ harmonicity: 1.5, modulationIndex: 12, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.8, sustain: 0, release: 0.8 } }).toDestination(),
+                    tambourine: new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.001, decay: 0.1, release: 0.01 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).toDestination(),
+                    castanets: new Tone.MembraneSynth({ pitchDecay: 0.001, octaves: 0.1, envelope: { attack: 0.001, decay: 0.05, sustain: 0 } }).toDestination()
+                };
+
+                recorderRef.current = new Tone.Recorder();
+                Tone.getDestination().connect(recorderRef.current);
+
+                loopRef.current = new Tone.Sequence((time, col) => {
+                    Tone.Draw.schedule(() => setCurrentStep(col), time);
+                    let playCount = 0;
+                    gridRef.current.forEach((row) => {
+                        const id = row[col];
+                        if (id) {
+                            playCount++;
+                            const synth = synths.current[id];
+                            if (id === 'triangle') synth.triggerAttackRelease("C8", "16n", time);
+                            else if (id === 'tambourine') synth.triggerAttackRelease("16n", time);
+                            else if (id === 'castanets') synth.triggerAttackRelease("C5", "32n", time);
+                            else synth.triggerAttackRelease(INSTRUMENTS.find(i => i.id === id).note, "8n", time);
+                        }
+                    });
+
+                    Tone.Draw.schedule(() => {
+                        if (playCount > 1) {
+                            setFeedback("✨ 우와! 악기가 겹치니 소리가 크고 풍부해져요!");
+                        } else if (playCount === 1) {
+                            setFeedback("🎶 멋진 소리가 나고 있어요!");
+                        }
+                    }, time);
+
+                }, [0, 1, 2, 3], "4n");
+
+                for (let i = 0; i < 30; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.style.left = Math.random() * 100 + 'vw'; star.style.top = Math.random() * 100 + 'vh';
+                    star.style.width = (Math.random() * 2 + 1) + 'px';
+                    star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(star);
+                }
+
+                return () => {
+                    Object.values(synths.current).forEach(s => s && s.dispose());
+                    if (loopRef.current) loopRef.current.dispose();
+                };
+            }, []);
+
+            useEffect(() => { gridRef.current = grid; }, [grid]);
+            useEffect(() => { Tone.Transport.bpm.value = bpm; }, [bpm]);
+
+            useEffect(() => {
+                if (view === 'main') {
+                    setShowGuide(true);
+                    const currentQ = questions.find(q => q.stage === stage);
+                    if (currentQ) setTimeout(() => speak(currentQ.guide), 500);
+                }
+            }, [stage, view]);
+
+            const triggerSound = async (id) => {
+                await Tone.start();
+                if (id === 'triangle') synths.current[id].triggerAttackRelease("C8", "16n");
+                else if (id === 'tambourine') synths.current[id].triggerAttackRelease("16n");
+                else if (id === 'castanets') synths.current[id].triggerAttackRelease("C5", "32n");
+                else synths.current[id].triggerAttackRelease(INSTRUMENTS.find(i => i.id === id).note, "8n");
+            };
+
+            const handlePlay = async () => {
+                await Tone.start();
+                if (!isPlaying) {
+                    Tone.Transport.start(); loopRef.current.start(0); setIsPlaying(true);
+                    setFeedback("전체 음악을 연주합니다!"); speak("전체 음악을 연주합니다!");
+                } else {
+                    Tone.Transport.stop(); loopRef.current.stop(); setIsPlaying(false); setCurrentStep(-1);
+                    setFeedback("멈췄어요. 빈 칸을 눌러 수정해보세요."); speak("연주를 멈췄어요.");
+                }
+            };
+
+            const handleMusicRecording = async () => {
+                await Tone.start();
+                if (!isMusicRecording) {
+                    recorderRef.current.start();
+                    setIsMusicRecording(true);
+                    if (!isPlaying) handlePlay();
+                    setFeedback("🔴 내가 만든 음악을 녹음 중!"); speak("음악 녹음을 시작합니다!");
+                } else {
+                    setIsMusicRecording(false);
+                    const rec = await recorderRef.current.stop();
+                    const url = URL.createObjectURL(rec);
+                    const a = document.createElement("a");
+                    a.download = `우주음악_${Date.now()}.webm`; a.href = url; a.click();
+                    setFeedback("✅ 음악이 저장되었어요!"); speak("음악 파일이 다운로드 되었어요!");
+                    setSessionData(p => ({ ...p, musicSaved: true }));
+                }
+            };
+
+            const handleCellClick = async (r, c) => {
+                await Tone.start();
+                const newGrid = [...grid];
+
+                if (stage === 1 || stage === 2) {
+                    if (r !== 0) return;
+                    if (newGrid[0][c]) {
+                        newGrid[0][c] = null;
+                    } else {
+                        newGrid[0][c] = selectedInst;
+                        triggerSound(selectedInst);
+                    }
+                } else {
+                    if (newGrid[r][c] === selectedInst) {
+                        newGrid[r][c] = null;
+                    } else {
+                        newGrid[r][c] = selectedInst;
+                        triggerSound(selectedInst);
+                    }
+                }
+                setGrid(newGrid);
+            };
+
+            const changeStage = (newStage) => {
+                Tone.Transport.stop(); loopRef.current.stop(); setIsPlaying(false); setCurrentStep(-1);
+
+                const newGrid = Array(4).fill(null).map(() => Array(4).fill(null));
+                if (newStage === 2) {
+                    newGrid[0] = [...grid[0]];
+                    setSelectedInst('drum');
+                    setFeedback("1단계의 박자가 그대로 남아있어요! 악기만 바꿔볼까요?");
+                } else if (newStage === 3) {
+                    setFeedback("여러 악기를 마구마구 섞어보세요!");
+                } else {
+                    setFeedback("작은 북을 빈 칸에 넣어보세요!");
+                    setSelectedInst('drum');
+                }
+
+                setGrid(newGrid);
+                setStage(newStage);
+                setView('main');
+            };
+            return (
+                <div className="app-container">
+                    <AnimatePresence mode="wait">
+                        {view === 'login' && (
+                            <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full text-center space-y-8">
+                                <h1 className="text-5xl font-black neon-glow tracking-widest mb-4">🎵 소리 탐험대 🎵</h1>
+                                <p className="text-large text-slate-600">어떤 소리가 들릴지 탐색하고 연주해봐요!</p>
+                                <div className="bg-white/70 backdrop-blur-xl p-10 rounded-[3rem] border-2 border-white/80 shadow-xl max-w-md w-full">
+                                    <select className="w-full p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-300 text-slate-700 text-large text-center outline-none focus:border-indigo-500" onChange={e => setStudent(students.find(s => s.no == e.target.value))} defaultValue="">
+                                        <option value="" disabled>이름을 선택하세요</option>
+                                        {students.map(s => <option key={s.no} value={s.no}>{s.name}</option>)}
+                                    </select>
+                                    <button onClick={async () => { if (!student) { alert('이름을 선택하세요!'); return; } await Tone.start(); try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); } catch (e) { alert('마이크 허용이 필요해요!'); return; } setView('prerecord'); }} className="mt-8 bg-indigo-500 hover:bg-indigo-400 text-white text-huge font-black px-12 py-5 rounded-full shadow-lg active:scale-95 transition-all w-full">출발! 🚀</button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {view === 'prerecord' && (
+                            <motion.div key="prerecord" className="flex flex-col items-center justify-center h-full space-y-8">
+                                <PencilFairy scale={1.2} />
+                                <RecorderUI title="주변에서 어떤 소리가 들리나요?" autoNext={true} onDone={async (b64, txt) => {
+                                    setSessionData(p => ({ ...p, preRecordText: txt }));
+                                    const res = await api.saveRecording({ studentName: student.name, phase: 'pre', audioBase64: b64 });
+                                    if (res.ok) setSessionData(p => ({ ...p, preRecordUrl: res.fileUrl }));
+                                }} onNext={() => changeStage(1)} />
+                            </motion.div>
+                        )}
+
+                        {view === 'main' && (
+                            <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full overflow-hidden">
+                                <div className="h-[12vh] flex justify-between items-center px-4 shrink-0">
+                                    <div className="flex items-center gap-4">
+                                        <PencilFairy scale={0.7} />
+                                        <div className="bg-white/70 backdrop-blur-md px-6 py-3 rounded-2xl border border-indigo-200 shadow-md min-w-[200px]">
+                                            <span className="text-large text-indigo-700 font-bold">{feedback || '악기를 선택하고 빈 칸을 눌러보세요!'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setSpeakerOn(!speakerOn)} className={`px-4 py-3 rounded-xl font-bold text-lg border-b-4 active:border-b-0 active:translate-y-1 ${speakerOn ? 'bg-emerald-400 border-emerald-600 text-white' : 'bg-slate-300 border-slate-400 text-slate-600'}`}>{speakerOn ? '🔊 켜짐' : '🔇 꺼짐'}</button>
+                                        <button onClick={() => { setShowGuide(true); const cq = questions.find(q => q.stage === stage); if (cq) speak(cq.guide); }} className="bg-amber-400 hover:bg-amber-300 px-4 py-3 rounded-xl font-bold text-lg border-b-4 border-amber-500 active:border-b-0 active:translate-y-1 text-amber-900">💡 도움말</button>
+                                        <div className="flex items-center gap-2 bg-white/60 px-4 py-3 rounded-2xl border border-indigo-200">
+                                            <span className="text-2xl">🐢</span>
+                                            <span className="text-sm text-slate-500">느리게</span>
+                                            <input type="range" min="60" max="140" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="w-28 md:w-36" />
+                                            <span className="text-sm text-slate-500">빠르게</span>
+                                            <span className="text-2xl">🐰</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="content-area">
+                                    <div className="flex flex-col gap-3 bg-white/50 backdrop-blur-md p-4 rounded-[2.5rem] border border-indigo-200 h-full overflow-y-auto justify-center">
+                                        {INSTRUMENTS.filter(inst => stage === 1 ? inst.id === 'drum' : true).map(inst => (
+                                            <div key={inst.id} onClick={() => { setSelectedInst(inst.id); triggerSound(inst.id); speak(inst.name); setFeedback(`${inst.name} 선택! 빈 칸을 눌러보세요.`); }} className={`instrument-card ${selectedInst === inst.id ? `${inst.color} ring-4 ring-indigo-400 shadow-lg scale-110` : 'bg-white/60 hover:bg-white/80'}`}>
+                                                <div className="w-16 h-16 flex items-center justify-center"><InstIcon type={inst.id} /></div>
+                                                <span className="text-medium font-bold mt-2 text-indigo-900">{inst.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid-box relative overflow-hidden flex-1 max-w-3xl bg-white/50 p-6 rounded-[3rem] border-4 border-indigo-100">
+                                        <div className="flex justify-around mb-6 text-indigo-400 font-bold text-xl tracking-widest px-4">
+                                            {['쿵', '짝', '쿵', '짝'].map((l, i) => <span key={i} className={currentStep === i ? "text-indigo-800 scale-125 transition-all" : "opacity-40"}>{l}</span>)}
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 px-2">
+                                            {grid.map((row, r) => {
+                                                if ((stage === 1 || stage === 2) && r > 0) return null;
+                                                return (
+                                                    <div key={r} className="flex gap-3 justify-center">
+                                                        {row.map((cell, c) => {
+                                                            const inst = cell ? INSTRUMENTS.find(i => i.id === cell) : null;
+                                                            return (
+                                                                <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)} className={`grid-cell border-2 flex items-center justify-center cursor-pointer transition-all rounded-2xl ${c === currentStep ? 'border-indigo-400 bg-indigo-100 scale-105' : 'border-indigo-200 bg-white/50 hover:bg-indigo-50'}`}>
+                                                                    {inst ? <div className={`w-[85%] h-[85%] rounded-[1.2rem] flex items-center justify-center ${inst.color} ${c === currentStep ? 'animate-bounce shadow-lg' : ''}`}><InstIcon type={inst.id} /></div> : null}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="h-[20vh] flex items-center justify-center gap-6 shrink-0 px-8 pb-4">
+                                    <div className="flex-1 text-center">
+                                        <span className="text-2xl font-bold neon-glow-green">현재 {stage}단계 진행중!</span>
+                                    </div>
+                                    <button onClick={handlePlay} className={`px-14 py-6 rounded-[3rem] font-black text-huge shadow-xl border-b-8 active:border-b-0 active:translate-y-2 transition-all ${isPlaying ? 'bg-rose-400 border-rose-600 text-white' : 'bg-indigo-500 border-indigo-700 text-white'}`}>{isPlaying ? '멈춤 ⏹' : '연주 ▶'}</button>
+                                    <div className="flex-1 flex justify-end">
+                                        {stage === 1 && <button onClick={() => changeStage(2)} className="py-4 px-8 rounded-full bg-indigo-500 text-white font-bold text-large shadow-lg active:scale-95">2단계 가기 →</button>}
+                                        {stage === 2 && <button onClick={() => changeStage(3)} className="py-4 px-8 rounded-full bg-indigo-500 text-white font-bold text-large shadow-lg active:scale-95">3단계 가기 →</button>}
+                                        {stage === 3 && (
+                                            <div className="flex flex-col gap-3">
+                                                <button onClick={handleMusicRecording} className={`py-4 px-8 rounded-full font-bold text-2xl whitespace-nowrap shadow-xl active:scale-95 transition-all ${isMusicRecording ? 'bg-red-500 animate-pulse text-white' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}>
+                                                    {isMusicRecording ? '녹음 끝 ⏹' : '🎵 음악 녹음'}
+                                                </button>
+                                                {sessionData.musicSaved && (
+                                                    <button onClick={() => { Tone.Transport.stop(); loopRef.current.stop(); setIsPlaying(false); setView('postrecord'); }} className="py-4 px-8 rounded-full bg-pink-500 hover:bg-pink-400 text-white font-bold text-2xl whitespace-nowrap shadow-xl active:scale-95 transition-all animate-bounce">
+                                                        🎤 내 생각 발표
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {view === 'postrecord' && (
+                            <motion.div key="postrecord" className="flex flex-col items-center justify-center h-full space-y-8">
+                                <PencilFairy scale={1.2} />
+                                <RecorderUI title="내 음악을 어떻게 만들었나요?" onDone={async (b64, txt) => {
+                                    setSessionData(p => ({ ...p, postRecordText: txt }));
+                                    const res = await api.saveRecording({ studentName: student.name, phase: 'post', audioBase64: b64 });
+                                    if (res.ok) setSessionData(p => ({ ...p, postRecordUrl: res.fileUrl }));
+                                }} onNext={() => setView('eval')} />
+                            </motion.div>
+                        )}
+
+                        {view === 'eval' && (
+                            <motion.div key="eval" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full w-full">
+                                <div className="bg-white/90 backdrop-blur-xl p-10 rounded-[3rem] border-2 border-indigo-100 shadow-xl text-center max-w-lg w-full">
+                                    <h2 className="text-4xl font-bold mb-4 text-indigo-900">스스로 평가해봐요!</h2>
+                                    <div className="flex justify-center gap-2 mb-8">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <span key={i} onClick={() => setSessionData(p => ({ ...p, score: i }))} className={`text-6xl cursor-pointer transition-all ${sessionData.score >= i ? 'text-yellow-400 scale-110 drop-shadow-lg' : 'text-slate-300 opacity-50'}`}>★</span>
+                                        ))}
+                                    </div>
+                                    {sessionData.score > 0 && sessionData.score <= 3 && <p className="text-pink-500 font-bold text-xl mb-6 animate-pulse">다시 한번 탐험해볼까요?</p>}
+                                    <button onClick={async () => {
+                                        if (!sessionData.score) return;
+                                        if (sessionData.score <= 3) { changeStage(1); }
+                                        else {
+                                            await api.saveData({ studentName: student.name, ...sessionData });
+                                            setView('finish');
+                                        }
+                                    }} className="w-full py-4 rounded-full bg-indigo-600 text-white font-bold text-2xl shadow-lg hover:bg-indigo-500">{sessionData.score <= 3 ? '1단계 다시 하기' : '수료증 받기!'}</button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {view === 'finish' && (
+                            <motion.div key="finish" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center h-full w-full relative">
+                                <div className="bg-white p-10 md:p-14 rounded-[4rem] border-[18px] border-indigo-200 shadow-[0_40px_80px_rgba(0,0,0,0.5)] text-slate-800 space-y-6 w-full max-w-4xl text-center relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none" style={{ background: 'radial-gradient(circle, #FFD700 20%, transparent 20%)', backgroundSize: '40px 40px' }}></div>
+                                    <div className="space-y-1 relative z-10">
+                                        <div className="text-indigo-400 text-xl font-bold tracking-widest">제 2026-001 호</div>
+                                        <h2 className="text-huge font-black text-indigo-700 underline underline-offset-8 decoration-indigo-200">소리 탐험 수료증</h2>
+                                    </div>
+                                    <div className="text-3xl font-bold text-slate-600 my-6">탐험가: {student.name}</div>
+                                    <div className="flex items-center gap-6 justify-center relative z-10">
+                                        <div className="space-y-6">
+                                            <p className="text-xl md:text-2xl font-bold leading-relaxed text-slate-700">
+                                                위 탐험가는 '소리 탐험대' 활동을 통해<br />
+                                                다양한 악기 소리를 탐색하고<br />
+                                                나만의 <span className="text-pink-500 font-black">조화로운 음악</span>을<br />
+                                                멋지게 완성하였으므로 이 증서를 수여합니다.
+                                            </p>
+                                            <div className="text-2xl text-slate-400 font-bold">{new Date().toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-10 right-10 flex flex-col items-center justify-center">
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1, rotate: -15 }} transition={{ type: "spring", stiffness: 120 }} className="w-40 h-40">
+                                            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl">
+                                                <defs>
+                                                    <linearGradient id="medalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                        <stop offset="0%" stopColor="#ff4b2b" />
+                                                        <stop offset="100%" stopColor="#ff416c" />
+                                                    </linearGradient>
+                                                </defs>
+                                                <circle cx="50" cy="50" r="45" fill="url(#medalGrad)" stroke="#fff" strokeWidth="4" />
+                                                <circle cx="50" cy="50" r="38" fill="none" stroke="#fff" strokeWidth="1" strokeDasharray="4 4" />
+                                                <text x="50" y="46" fontSize="14" fontWeight="black" textAnchor="middle" fill="#fff">참</text>
+                                                <text x="50" y="66" fontSize="14" fontWeight="black" textAnchor="middle" fill="#fff">잘했어요</text>
+                                            </svg>
+                                        </motion.div>
+                                    </div>
+                                </div>
+                                <button onClick={() => window.location.reload()} className="mt-8 px-12 py-5 rounded-full bg-indigo-600 text-white font-black text-large shadow-xl active:scale-95 transition-all">처음으로 돌아가기</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {showGuide && (
+                        <div className="modal-overlay" onClick={() => setShowGuide(false)}>
+                            <div className="bg-white/90 backdrop-blur-xl p-10 rounded-3xl border-2 border-indigo-300 shadow-2xl max-w-2xl w-full text-center" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-huge font-bold text-indigo-700 mb-6">💡 {questions.find(q => q.stage === stage)?.title || '활동 도움말'}</h3>
+                                <p className="text-large leading-relaxed text-slate-700 mb-8 break-keep" style={{ whiteSpace: 'pre-line' }}>{questions.find(q => q.stage === stage)?.guide || '자유롭게 음악을 만들어보세요!'}</p>
+                                <button onClick={() => setShowGuide(false)} className="px-10 py-4 bg-indigo-500 rounded-full font-bold text-large text-white shadow-lg hover:bg-indigo-400">알겠어요! 👍</button>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
