@@ -226,12 +226,50 @@ const SITUATIONS = [
 /* ===== 단계 안내 (짧게) ===== */
 const STAGE_INFO = {
   1:{title:'1단계 · 박 느끼기', short:'작은 북을 빈 칸에 콕콕! 박을 느껴봐요.',
-     guide:'1. 위쪽에서 \'작은 북\'을 한 번 눌러 골라요.\n2. 가운데 빈 칸을 손가락으로 콕! 누르면 북이 들어가요.\n3. 잘못 넣었으면 그 칸을 한 번 더 누르면 빠져요.\n4. 칸을 다 채웠으면 아래 [연주 ▶] 버튼을 눌러요.\n5. 어떤 박이 들리는지 귀 기울여 들어봐요!'},
+     steps:['빈 칸을 한 번 누르면 작은 북이 들어가요.','같은 칸을 다시 누르면 작은 북이 빠져요.','다 만들었으면 아래 [연주 ▶] 를 눌러 들어봐요.']},
   2:{title:'2단계 · 악기 바꾸기', short:'박자는 그대로! 악기만 바꿔서 느낌을 비교해요.',
-     guide:'1. 1단계에서 만든 박자가 그대로 남아 있어요.\n2. 위쪽에서 다른 악기를 한 번 눌러보세요.\n3. 그러면 모든 칸의 악기가 한 번에 바뀌어요.\n4. 아래 [연주 ▶] 버튼을 눌러 소리를 들어봐요.\n5. 악기에 따라 느낌이 어떻게 다른지 비교해봐요!'},
+     steps:['위쪽에서 다른 악기를 한 번 눌러보세요.','모든 칸의 악기가 한 번에 바뀌어요.','[연주 ▶] 로 느낌이 어떻게 다른지 들어봐요.']},
   3:{title:'3단계 · 악기 섞기', short:'여러 악기를 함께! 풍부한 소리를 만들어요.',
-     guide:'1. 칸이 세 줄로 늘어났어요.\n2. 위쪽에서 악기를 고른 뒤, 빈 칸을 눌러 넣어요.\n3. 줄마다 다른 악기를 넣을 수 있어요.\n4. 같은 칸 자리를 맞추면 소리가 함께 울려요.\n5. [연주 ▶] 로 듣고, 마음에 들면 [🎵 음악 녹음] 을 눌러요!'},
+     steps:['악기를 고른 다음, 빈 칸을 눌러 넣어요.','줄마다 다른 악기를 넣을 수 있어요.','마음에 들면 [🎵 음악 녹음] 을 눌러요.']},
 };
+
+/* ===== 단계 안내 팝업 (한 문장씩 넘기기) ===== */
+function GuideModal({title, short, steps, onClose}){
+  const [i,setI]=useState(0);
+  useEffect(()=>{ const t=setTimeout(()=>speak(steps[0]),300); return ()=>clearTimeout(t); },[]);
+  const go=(n)=>{ setI(n); speak(steps[n]); };
+  const last = i>=steps.length-1;
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="card p-9 w-[660px] text-center" onClick={e=>e.stopPropagation()}>
+        <div className="t-huge text-indigo-700 mb-1">💡 {title}</div>
+        <div className="t-mid text-slate-400 mb-5">{short}</div>
+        {/* 진행 점 */}
+        <div className="flex justify-center gap-2 mb-6">
+          {steps.map((_,k)=>(
+            <div key={k} className="rounded-full transition-all"
+              style={{width:k===i?38:16,height:16,
+                background:k===i?'#7c6cf0':(k<i?'#c4b5fd':'#e5e0f5')}}/>
+          ))}
+        </div>
+        {/* 한 문장만 크게 */}
+        <div className="bg-indigo-50 rounded-3xl px-7 flex items-center justify-center mb-7"
+          style={{minHeight:180}}>
+          <span className="t-huge text-slate-700" style={{lineHeight:1.3}}>{steps[i]}</span>
+        </div>
+        {/* 넘기기 버튼 */}
+        <div className="flex gap-3 justify-center">
+          {i>0 && <button className="btn bg-slate-200 text-slate-600 t-big px-8 py-4"
+            onClick={()=>go(i-1)}>← 이전</button>}
+          {!last && <button className="btn bg-indigo-500 text-white t-big px-12 py-4"
+            onClick={()=>go(i+1)}>다음 →</button>}
+          {last && <button className="btn bg-emerald-500 text-white t-big px-12 py-4"
+            onClick={onClose}>시작할게요! 👍</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ===== 따라읽기 하이라이트 텍스트 ===== */
 function SpeakText({text}){
@@ -499,10 +537,7 @@ function App(){
 
   /* 단계 들어올 때 안내 */
   useEffect(()=>{
-    if(view==='stage'){
-      setShowGuide(true);
-      setTimeout(()=>speak(STAGE_INFO[stage].guide.replace(/\n/g,' ')),400);
-    }
+    if(view==='stage') setShowGuide(true);
   },[view,stage]);
 
   const trigger=async(id)=>{
@@ -691,7 +726,7 @@ function App(){
               <span className="t-sm text-indigo-700 truncate">{feedback||STAGE_INFO[stage].short}</span>
             </div>
             <button className="btn bg-amber-300 text-amber-900 px-5 py-2 t-sm whitespace-nowrap"
-              onClick={()=>{ setShowGuide(true); speak(STAGE_INFO[stage].guide.replace(/\n/g,' ')); }}>💡 도움말</button>
+              onClick={()=>setShowGuide(true)}>💡 도움말</button>
             <div className="card px-4 py-1 flex items-center gap-2">
               <span className="text-2xl">🐢</span>
               <input type="range" min="50" max="150" value={bpm} onChange={e=>setBpm(Number(e.target.value))}/>
@@ -934,24 +969,13 @@ function App(){
         </div>
       )}
 
-      {/* ---- 활동 안내 팝업 ---- */}
+      {/* ---- 활동 안내 팝업 (한 문장씩) ---- */}
       {showGuide && view==='stage' && (
-        <div className="modal-bg" onClick={()=>setShowGuide(false)}>
-          <div className="card p-8 w-[700px]" style={{maxHeight:'94%',overflowY:'auto'}}
-            onClick={e=>e.stopPropagation()}>
-            <div className="t-huge text-indigo-700 text-center mb-1">💡 {STAGE_INFO[stage].title}</div>
-            <div className="t-mid text-slate-500 text-center mb-5">{STAGE_INFO[stage].short}</div>
-            <div className="flex flex-col gap-3 mb-6">
-              {STAGE_INFO[stage].guide.split('\n').map((line,i)=>(
-                <div key={i} className="bg-indigo-50 rounded-2xl px-5 py-3">
-                  <span className="t-big text-slate-700">{line}</span>
-                </div>
-              ))}
-            </div>
-            <button className="btn bg-indigo-500 text-white t-big px-10 py-4 w-full"
-              onClick={()=>setShowGuide(false)}>알겠어요! 시작할게요 👍</button>
-          </div>
-        </div>
+        <GuideModal key={stage}
+          title={STAGE_INFO[stage].title}
+          short={STAGE_INFO[stage].short}
+          steps={STAGE_INFO[stage].steps}
+          onClose={()=>setShowGuide(false)}/>
       )}
     </div>
   );
