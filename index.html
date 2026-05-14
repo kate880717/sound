@@ -226,11 +226,11 @@ const SITUATIONS = [
 /* ===== 단계 안내 (짧게) ===== */
 const STAGE_INFO = {
   1:{title:'1단계 · 박 느끼기', short:'작은 북을 빈 칸에 콕콕! 박을 느껴봐요.',
-     guide:'빈 칸을 누르면 작은 북이 들어가요.\n한 번 더 누르면 빠져요.\n[연주]를 눌러 들어봐요!'},
+     guide:'1. 위쪽에서 \'작은 북\'을 한 번 눌러 골라요.\n2. 가운데 빈 칸을 손가락으로 콕! 누르면 북이 들어가요.\n3. 잘못 넣었으면 그 칸을 한 번 더 누르면 빠져요.\n4. 칸을 다 채웠으면 아래 [연주 ▶] 버튼을 눌러요.\n5. 어떤 박이 들리는지 귀 기울여 들어봐요!'},
   2:{title:'2단계 · 악기 바꾸기', short:'박자는 그대로! 악기만 바꿔서 느낌을 비교해요.',
-     guide:'아래 악기를 누르면\n전체 박자의 악기가 바뀌어요.\n악기마다 느낌이 달라요!'},
+     guide:'1. 1단계에서 만든 박자가 그대로 남아 있어요.\n2. 위쪽에서 다른 악기를 한 번 눌러보세요.\n3. 그러면 모든 칸의 악기가 한 번에 바뀌어요.\n4. 아래 [연주 ▶] 버튼을 눌러 소리를 들어봐요.\n5. 악기에 따라 느낌이 어떻게 다른지 비교해봐요!'},
   3:{title:'3단계 · 악기 섞기', short:'여러 악기를 함께! 풍부한 소리를 만들어요.',
-     guide:'여러 줄에 악기를 넣어보세요.\n같이 연주되면 소리가 풍부해져요.\n[음악 녹음]으로 저장해요!'},
+     guide:'1. 칸이 세 줄로 늘어났어요.\n2. 위쪽에서 악기를 고른 뒤, 빈 칸을 눌러 넣어요.\n3. 줄마다 다른 악기를 넣을 수 있어요.\n4. 같은 칸 자리를 맞추면 소리가 함께 울려요.\n5. [연주 ▶] 로 듣고, 마음에 들면 [🎵 음악 녹음] 을 눌러요!'},
 };
 
 /* ===== 따라읽기 하이라이트 텍스트 ===== */
@@ -684,67 +684,66 @@ function App(){
       {/* ---- 단계 (음악 만들기) ---- */}
       {view==='stage' && (
         <div className="h-full flex flex-col fade-in">
-          {/* 헤더 */}
-          <div className="flex items-center justify-between mb-3 pr-44">
-            <div className="flex items-center gap-3">
-              <FAIRY size={56}/>
-              <div className="card px-6 py-3"><span className="t-mid text-indigo-700">{feedback||STAGE_INFO[stage].short}</span></div>
+          {/* 상단 바 */}
+          <div className="flex items-center gap-3 mb-2 pr-44" style={{height:62}}>
+            <div className="float text-5xl">🎵</div>
+            <div className="card px-5 py-2 flex-1 flex items-center" style={{minWidth:0}}>
+              <span className="t-sm text-indigo-700 truncate">{feedback||STAGE_INFO[stage].short}</span>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="btn bg-amber-300 text-amber-900 px-5 py-3 t-mid"
-                onClick={()=>{ setShowGuide(true); speak(STAGE_INFO[stage].guide.replace(/\n/g,' ')); }}>💡 도움말</button>
-              <div className="card px-5 py-2 flex items-center gap-2">
-                <span className="text-3xl">🐢</span>
-                <input type="range" min="50" max="150" value={bpm} onChange={e=>setBpm(Number(e.target.value))}/>
-                <span className="text-3xl">🐰</span>
-              </div>
+            <button className="btn bg-amber-300 text-amber-900 px-5 py-2 t-sm whitespace-nowrap"
+              onClick={()=>{ setShowGuide(true); speak(STAGE_INFO[stage].guide.replace(/\n/g,' ')); }}>💡 도움말</button>
+            <div className="card px-4 py-1 flex items-center gap-2">
+              <span className="text-2xl">🐢</span>
+              <input type="range" min="50" max="150" value={bpm} onChange={e=>setBpm(Number(e.target.value))}/>
+              <span className="text-2xl">🐰</span>
             </div>
           </div>
 
-          {/* 상황 배너 */}
-          {situation && (
-            <div className="card px-6 py-2 mb-3 self-center t-mid text-indigo-600">
-              지금 만드는 장면 : {situation.emoji} {situation.name}
-            </div>
-          )}
+          {/* 장면 + 단계 */}
+          <div className="flex items-center justify-center gap-3 mb-2" style={{height:46}}>
+            {situation && (
+              <div className="card px-4 py-1 t-sm text-indigo-600 whitespace-nowrap">
+                {situation.emoji} {situation.name}
+              </div>
+            )}
+            <div className="t-big text-indigo-700 whitespace-nowrap">{STAGE_INFO[stage].title}</div>
+          </div>
 
-          <div className="t-big text-center text-indigo-700 mb-2">{STAGE_INFO[stage].title}</div>
+          {/* 악기 (가로 줄) */}
+          <div className="flex justify-center gap-3 mb-2">
+            {INSTRUMENTS.filter(i=>stage===1?i.id==='drum':true).map(inst=>(
+              <div key={inst.id}
+                onClick={()=>{
+                  if(stage===2){ swapAllInstrument(inst.id); }
+                  else { setSelectedInst(inst.id); trigger(inst.id); speak(inst.name);
+                    setFeedback(`${inst.name} 선택! 빈 칸을 눌러요.`); }
+                }}
+                className={"inst-card "+(selectedInst===inst.id?'sel':'')}
+                style={{width:128,height:104,padding:6,
+                  background:selectedInst===inst.id?inst.color:'rgba(255,255,255,0.78)'}}>
+                <InstIcon type={inst.id} size={50}/>
+                <span className="t-sm mt-1 text-slate-700">{inst.name}</span>
+              </div>
+            ))}
+          </div>
 
-          {/* 본문 */}
-          <div className="flex-1 flex items-center justify-center gap-6">
-            {/* 악기 패널 */}
-            <div className="card p-3 flex flex-col gap-2">
-              {INSTRUMENTS.filter(i=>stage===1?i.id==='drum':true).map(inst=>(
-                <div key={inst.id}
-                  onClick={()=>{
-                    if(stage===2){ swapAllInstrument(inst.id); }
-                    else { setSelectedInst(inst.id); trigger(inst.id); speak(inst.name);
-                      setFeedback(`${inst.name} 선택! 빈 칸을 눌러요.`); }
-                  }}
-                  className={"inst-card w-[136px] p-2 "+(selectedInst===inst.id?'sel':'')}
-                  style={{background:selectedInst===inst.id?inst.color:'rgba(255,255,255,0.7)'}}>
-                  <InstIcon type={inst.id} size={52}/>
-                  <span className="t-sm mt-1 text-slate-700">{inst.name}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* 그리드 */}
-            <div className="card p-6 flex-1 max-w-[900px]">
+          {/* 그리드 */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="card p-5" style={{maxWidth:1040}}>
               {/* 박자 라벨 - 쿵쿵쿵쿵 크게 */}
-              <div className="flex justify-around mb-4 px-1">
+              <div className="flex justify-around mb-3 px-1">
                 {Array(COLS).fill('쿵').map((l,i)=>(
                   <span key={i} className={"t-big transition-all "+(step===i?'text-indigo-700 scale-150':'text-indigo-300')}>{l}</span>
                 ))}
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {grid.map((row,r)=>{
                   if(stage!==3 && r>0) return null;
                   return (
-                    <div key={r} className="flex gap-3 justify-center">
+                    <div key={r} className="flex gap-2 justify-center">
                       {row.map((cell,c)=>{
                         const inst=cell?INSTRUMENTS.find(i=>i.id===cell):null;
-                        const sz=stage===3?76:90;
+                        const sz=stage===3?74:92;
                         return (
                           <div key={c} onClick={()=>handleCell(r,c)}
                             className={"beat-cell "+(step===c?'now ':'')+(inst?'filled':'')}
@@ -760,33 +759,25 @@ function App(){
             </div>
           </div>
 
-          {/* 하단 버튼 + 안내 (버튼 근처) */}
-          <div className="flex items-end justify-center gap-6 mt-3 pb-2">
-            <div className="w-[260px] text-center">
-              <div className="t-mid text-slate-500">{STAGE_INFO[stage].short}</div>
-            </div>
-            <div className="flex flex-col items-center">
-              <button onClick={play}
-                className={"btn t-huge px-14 py-6 text-white "+(isPlaying?'bg-rose-400':'bg-indigo-500')}>
-                {isPlaying?'멈춤 ⏹':'연주 ▶'}
+          {/* 하단 버튼 */}
+          <div className="flex items-center justify-center gap-5 mt-1" style={{height:104}}>
+            <button onClick={play}
+              className={"btn t-big px-12 py-4 text-white "+(isPlaying?'bg-rose-400':'bg-indigo-500')}>
+              {isPlaying?'멈춤 ⏹':'연주 ▶'}
+            </button>
+            {stage===1 && <button className="btn bg-emerald-400 text-white t-big px-8 py-4"
+              onClick={()=>goStage(2)}>2단계 가기 →</button>}
+            {stage===2 && <button className="btn bg-emerald-400 text-white t-big px-8 py-4"
+              onClick={()=>goStage(3)}>3단계 가기 →</button>}
+            {stage===3 && (<>
+              <button onClick={musicRec}
+                className={"btn t-big px-8 py-4 text-white "+(isMusicRec?'bg-red-500':'bg-pink-500')}>
+                {isMusicRec?'녹음 끝 ⏹':'🎵 음악 녹음'}
               </button>
-              <div className="t-sm text-slate-400 mt-1">눌러서 전체 음악 듣기</div>
-            </div>
-            <div className="w-[260px] flex flex-col items-center gap-2">
-              {stage===1 && <button className="btn bg-emerald-400 text-white t-big px-8 py-4"
-                onClick={()=>goStage(2)}>2단계 가기 →</button>}
-              {stage===2 && <button className="btn bg-emerald-400 text-white t-big px-8 py-4"
-                onClick={()=>goStage(3)}>3단계 가기 →</button>}
-              {stage===3 && (<>
-                <button onClick={musicRec}
-                  className={"btn t-big px-8 py-4 text-white "+(isMusicRec?'bg-red-500':'bg-pink-500')}>
-                  {isMusicRec?'녹음 끝 ⏹':'🎵 음악 녹음'}
-                </button>
-                {musicSaved && <button className="btn bg-violet-500 text-white t-big px-8 py-4 float"
-                  onClick={()=>{ Tone.Transport.stop(); loop.current.stop(); setIsPlaying(false); setView('reflection'); }}>
-                  🎤 다음으로 →</button>}
-              </>)}
-            </div>
+              {musicSaved && <button className="btn bg-violet-500 text-white t-big px-8 py-4 float"
+                onClick={()=>{ Tone.Transport.stop(); loop.current.stop(); setIsPlaying(false); setView('reflection'); }}>
+                🎤 다음으로 →</button>}
+            </>)}
           </div>
         </div>
       )}
@@ -946,11 +937,19 @@ function App(){
       {/* ---- 활동 안내 팝업 ---- */}
       {showGuide && view==='stage' && (
         <div className="modal-bg" onClick={()=>setShowGuide(false)}>
-          <div className="card p-10 w-[640px] text-center" onClick={e=>e.stopPropagation()}>
-            <div className="t-huge text-indigo-700 mb-4">💡 {STAGE_INFO[stage].title}</div>
-            <p className="t-big text-slate-600 mb-7" style={{whiteSpace:'pre-line'}}>{STAGE_INFO[stage].guide}</p>
-            <button className="btn bg-indigo-500 text-white t-big px-10 py-4"
-              onClick={()=>setShowGuide(false)}>알겠어요! 👍</button>
+          <div className="card p-8 w-[700px]" style={{maxHeight:'94%',overflowY:'auto'}}
+            onClick={e=>e.stopPropagation()}>
+            <div className="t-huge text-indigo-700 text-center mb-1">💡 {STAGE_INFO[stage].title}</div>
+            <div className="t-mid text-slate-500 text-center mb-5">{STAGE_INFO[stage].short}</div>
+            <div className="flex flex-col gap-3 mb-6">
+              {STAGE_INFO[stage].guide.split('\n').map((line,i)=>(
+                <div key={i} className="bg-indigo-50 rounded-2xl px-5 py-3">
+                  <span className="t-big text-slate-700">{line}</span>
+                </div>
+              ))}
+            </div>
+            <button className="btn bg-indigo-500 text-white t-big px-10 py-4 w-full"
+              onClick={()=>setShowGuide(false)}>알겠어요! 시작할게요 👍</button>
           </div>
         </div>
       )}
