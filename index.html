@@ -46,7 +46,7 @@ input[type=range]::-webkit-slider-runnable-track{height:14px;border-radius:20px;
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:38px;width:38px;
   border-radius:50%;background:#7c6cf0;margin-top:-12px;border:4px solid #fff;
   box-shadow:0 4px 12px rgba(124,108,240,.5);cursor:pointer;}
-textarea{font-family:'Jua',sans-serif;}
+textarea,input[type=text]{font-family:'Jua',sans-serif;}
 .confetti{position:fixed;width:12px;height:12px;border-radius:3px;z-index:9999;pointer-events:none;}
 @keyframes fall{0%{transform:translateY(-20px) rotate(0);opacity:1;}
   100%{transform:translateY(820px) rotate(720deg);opacity:0;}}
@@ -56,6 +56,8 @@ textarea{font-family:'Jua',sans-serif;}
 .pop{animation:pop .5s ease-out;}
 .float{animation:floaty 3s ease-in-out infinite;}
 @keyframes floaty{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+@keyframes pulseRed{0%,100%{background:#fb7185;}50%{background:#ef4444;}}
+.rec{animation:pulseRed 1s ease-in-out infinite;}
 .char-on{color:#ec4899;text-shadow:0 2px 8px rgba(236,72,153,.35);}
 .fade-in{animation:fadeIn .35s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
@@ -70,14 +72,12 @@ textarea{font-family:'Jua',sans-serif;}
 <script type="text/babel">
 const {useState,useEffect,useRef} = React;
 
-/* ===== GAS URL ===== */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwE4cXnPyYcBOwsWcjlit2jJawm-mZ-jcrS-fR0-ovCXcWnw9rfq6yDNJ3OL0k99AY/exec';
 
 const api = {
   request: async (action,data={})=>{
     if(!GAS_URL){
       if(action==='getStudents') return {ok:true,students:[{no:1,name:'홍길동 (테스트)'},{no:2,name:'김민준 (테스트)'}]};
-      if(action==='getQuestions') return {ok:true,questions:[]};
       if(action==='saveRecording') return new Promise(r=>setTimeout(()=>r({ok:true,fileUrl:'http://mock'}),800));
       return {ok:true};
     }
@@ -85,12 +85,10 @@ const api = {
     catch(e){ return {ok:false,error:e.message}; }
   },
   getStudents:()=>api.request('getStudents'),
-  getQuestions:()=>api.request('getQuestions'),
   saveRecording:(d)=>api.request('saveRecording',d),
   saveData:(d)=>api.request('saveData',d),
 };
 
-/* ===== TTS ===== */
 const speakerRef = React.createRef(); speakerRef.current = false;
 function pickKoreanVoice(){
   const vs = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
@@ -114,14 +112,12 @@ function speak(text,opts={}){
 }
 if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=()=>{};
 
-/* ===== 효과음 ===== */
 const fx = {synth:null,
   init(){ if(!this.synth) this.synth = new Tone.Synth({oscillator:{type:'triangle'}}).toDestination(); },
   yay(){ if(!speakerRef.current)return; this.init(); const n=Tone.now();
     ['C5','E5','G5','C6','E6'].forEach((nt,i)=>this.synth.triggerAttackRelease(nt,0.15,n+i*0.1));}
 };
 
-/* ===== 폭죽 ===== */
 function confetti(){
   const colors=['#fbbf24','#f472b6','#34d399','#60a5fa','#a78bfa','#fb7185'];
   for(let i=0;i<46;i++){
@@ -133,13 +129,14 @@ function confetti(){
   }
 }
 
-/* ===== 데이터 ===== */
 const INSTRUMENTS = [
   {id:'drum',     name:'작은 북',     color:'#fb923c'},
   {id:'triangle', name:'트라이앵글',  color:'#fbbf24'},
   {id:'tambourine',name:'탬버린',     color:'#f472b6'},
   {id:'castanets',name:'캐스터네츠',  color:'#f87171'},
 ];
+const CUSTOM_COLORS = {my1:'#a78bfa', my2:'#2dd4bf'};
+const CUSTOM_DEFAULT_NAMES = {my1:'내 소리 1', my2:'내 소리 2'};
 
 const SITUATIONS = [
   {id:'snail', emoji:'🐌', name:'달팽이가 기어가요', desc:'아주 천천히 움직여요', bpm:62, hint:'느릿느릿 천천히! 칸을 띄엄띄엄 채워볼까요?'},
@@ -148,12 +145,11 @@ const SITUATIONS = [
 ];
 
 const TEMPO_PRESETS = [
-  {id:'slow',  emoji:'🐌', label:'느리게',  bpm:60},
-  {id:'mid',   emoji:'🚶', label:'보통',    bpm:100},
-  {id:'fast',  emoji:'🏃', label:'빠르게',  bpm:140},
+  {id:'slow', emoji:'🐌', label:'느리게', bpm:60},
+  {id:'mid',  emoji:'🚶', label:'보통',   bpm:100},
+  {id:'fast', emoji:'🏃', label:'빠르게', bpm:140},
 ];
 
-/* 규칙 — 음악의 수학적 패턴 */
 const RULE_PATTERNS = [
   {id:'every1', label:'매 박마다', pattern:[1,1,1,1,1,1,1,1], desc:'쿵 쿵 쿵 쿵 쿵 쿵 쿵 쿵'},
   {id:'every2', label:'두 박마다 한 번', pattern:[1,0,1,0,1,0,1,0], desc:'쿵 - 쿵 - 쿵 - 쿵 -'},
@@ -166,10 +162,9 @@ const STAGE_INFO = {
   2:{title:'2단계 · 악기 바꾸기', short:'박자는 그대로, 악기만 바꿔봐요.',
      steps:['위쪽에서 다른 악기를 한 번 눌러보세요.','모든 칸의 악기가 한 번에 바뀌어요.','[연주 ▶] 로 느낌이 어떻게 다른지 들어봐요.']},
   3:{title:'3단계 · 자유롭게 섞기', short:'여러 악기를 함께! 풍부한 소리를 만들어요.',
-     steps:['악기를 고른 다음, 빈 칸을 눌러 넣어요.','줄마다 다른 악기를 넣을 수 있어요.','마음에 들면 [🎵 음악 녹음] 을 눌러요.']},
+     steps:['악기를 고른 다음, 빈 칸을 눌러 넣어요.','줄마다 다른 악기를 넣으면 같이 울려요.','마음에 들면 [🎵 음악 녹음] 을 눌러요.']},
 };
 
-/* ===== 악기 아이콘 ===== */
 function InstIcon({type,size=60}){
   const s={width:size,height:size};
   if(type==='drum') return (
@@ -197,25 +192,27 @@ function InstIcon({type,size=60}){
       <path d="M24 55 A26 26 0 0 0 76 55 Z" fill="#b91c1c" stroke="#991b1b" strokeWidth="3"/>
       <circle cx="50" cy="53" r="6" fill="#450a0a"/>
       <path d="M40 27 A10 10 0 0 1 60 27" fill="none" stroke="#fbbf24" strokeWidth="5"/></svg>);
+  if(type==='my1'||type==='my2') return (
+    <svg viewBox="0 0 100 100" style={s}>
+      <circle cx="50" cy="50" r="36" fill={CUSTOM_COLORS[type]} stroke="#fff" strokeWidth="3"/>
+      <rect x="40" y="28" width="20" height="32" rx="10" fill="#fff"/>
+      <path d="M30 50 V58 Q30 72 50 72 Q70 72 70 58 V50" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round"/>
+      <line x1="50" y1="72" x2="50" y2="82" stroke="#fff" strokeWidth="4" strokeLinecap="round"/></svg>);
   return null;
 }
 
-/* ===== 따라읽기 ===== */
 function SpeakText({text}){
   const [idx,setIdx]=useState(-1);
   return (
     <div className="flex items-center gap-3">
       <span className="t-mid">{text.split('').map((c,i)=><span key={i} className={i<idx?'char-on':''}>{c}</span>)}</span>
       <button className="btn bg-indigo-400 text-white px-4 py-2 t-sm"
-        onClick={()=>{ setIdx(0);
-          speak(text,{onboundary:e=>setIdx(e.charIndex), onend:()=>setIdx(text.length)});
-          if(!speakerRef.current) setIdx(-1);
-        }}>🔊 듣기</button>
+        onClick={()=>{ setIdx(0); speak(text,{onboundary:e=>setIdx(e.charIndex), onend:()=>setIdx(text.length)});
+          if(!speakerRef.current) setIdx(-1); }}>🔊 듣기</button>
     </div>
   );
 }
 
-/* ===== 스티커 ===== */
 const STICKERS=['⭐','💖','🌸','🌟','🎉'];
 function StickerPick({value,onPick}){
   return (
@@ -231,7 +228,7 @@ function StickerPick({value,onPick}){
   );
 }
 
-/* ===== 녹음 ===== */
+/* ===== 일반 녹음(말로/글자로) ===== */
 function RecorderUI({title, examples, onComplete}){
   const [mode,setMode]=useState(null);
   const [recording,setRecording]=useState(false);
@@ -273,8 +270,7 @@ function RecorderUI({title, examples, onComplete}){
     if(sr.current){ try{sr.current.stop();}catch(e){} }
     setRecording(false); setMode('done');
   };
-  const reset = ()=>{ setMode(null); setRecording(false); setText(''); textRef.current='';
-    setB64(''); setAudioUrl(''); setSticker(''); };
+  const reset = ()=>{ setMode(null); setRecording(false); setText(''); textRef.current=''; setB64(''); setAudioUrl(''); setSticker(''); };
 
   return (
     <div className="card p-8 w-[760px] text-center fade-in">
@@ -282,10 +278,8 @@ function RecorderUI({title, examples, onComplete}){
       {mode===null && (
         <div className="flex flex-col items-center gap-4">
           <div className="flex gap-4">
-            <button className="btn bg-indigo-500 text-white px-9 py-5 t-big"
-              onClick={()=>{ Tone.start(); startRec(); }}>🎤 말로 녹음</button>
-            <button className="btn bg-teal-400 text-white px-9 py-5 t-big"
-              onClick={()=>setMode('type')}>⌨️ 글자로 쓰기</button>
+            <button className="btn bg-indigo-500 text-white px-9 py-5 t-big" onClick={()=>{ Tone.start(); startRec(); }}>🎤 말로 녹음</button>
+            <button className="btn bg-teal-400 text-white px-9 py-5 t-big" onClick={()=>setMode('type')}>⌨️ 글자로 쓰기</button>
           </div>
           <button className="btn bg-slate-300 text-slate-600 px-7 py-3 t-mid"
             onClick={()=>onComplete({text:'',b64:'',helpUsed,sticker:'',skipped:true})}>건너뛰기 →</button>
@@ -355,8 +349,7 @@ function GuideModal({title, short, steps, onClose}){
         <div className="flex justify-center gap-2 mb-5">
           {steps.map((_,k)=>(
             <div key={k} className="rounded-full transition-all"
-              style={{width:k===i?34:14,height:14,
-                background:k===i?'#7c6cf0':(k<i?'#c4b5fd':'#e5e0f5')}}/>
+              style={{width:k===i?34:14,height:14, background:k===i?'#7c6cf0':(k<i?'#c4b5fd':'#e5e0f5')}}/>
           ))}
         </div>
         <div className="bg-indigo-50 rounded-3xl px-6 flex items-center justify-center mb-6" style={{minHeight:160}}>
@@ -372,6 +365,70 @@ function GuideModal({title, short, steps, onClose}){
   );
 }
 
+/* ===== 내 소리 슬롯 ===== */
+function CustomSoundSlot({slot, info, onRecorded, onClear, onPreview, onRename}){
+  const [recording,setRecording]=useState(false);
+  const [timer,setTimer]=useState(0);
+  const mr=useRef(null), chunks=useRef([]), tick=useRef(null);
+  const stream=useRef(null);
+
+  const start = async ()=>{
+    try{
+      const st = await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.current = st;
+      chunks.current=[];
+      mr.current=new window.MediaRecorder(st);
+      mr.current.ondataavailable=e=>chunks.current.push(e.data);
+      mr.current.onstop=async ()=>{
+        const blob=new Blob(chunks.current,{type:'audio/webm'});
+        const url=URL.createObjectURL(blob);
+        st.getTracks().forEach(t=>t.stop());
+        clearInterval(tick.current);
+        setRecording(false);
+        setTimer(0);
+        await onRecorded(slot, url, blob);
+      };
+      mr.current.start(); setRecording(true);
+      setTimer(0); tick.current=setInterval(()=>setTimer(t=>{
+        if(t>=4){ // 5초 자동 종료 (0~4 = 5초)
+          if(mr.current && mr.current.state==='recording') mr.current.stop();
+          return t;
+        }
+        return t+1;
+      }),1000);
+    }catch(e){ alert('마이크를 사용할 수 없어요. 건너뛰어도 괜찮아요.'); }
+  };
+  const stop = ()=>{ if(mr.current && mr.current.state==='recording') mr.current.stop(); };
+
+  return (
+    <div className="card p-5 w-[320px] flex flex-col items-center gap-3">
+      <InstIcon type={slot} size={64}/>
+      <input type="text" value={info?.name || CUSTOM_DEFAULT_NAMES[slot]}
+        onChange={e=>onRename(slot, e.target.value)}
+        placeholder={CUSTOM_DEFAULT_NAMES[slot]}
+        className="w-full t-mid text-center rounded-2xl bg-white/70 border-2 border-indigo-200 px-3 py-2 outline-none focus:border-indigo-400"/>
+      {!info && !recording && (
+        <button onClick={start} className="btn bg-indigo-500 text-white px-7 py-3 t-mid">🎤 녹음 시작</button>
+      )}
+      {recording && (
+        <>
+          <div className="w-20 h-20 rounded-full rec flex items-center justify-center text-4xl text-white">{5-timer}</div>
+          <button onClick={stop} className="btn bg-rose-500 text-white px-6 py-2 t-mid">⏹ 끝</button>
+        </>
+      )}
+      {info && !recording && (
+        <div className="flex gap-2">
+          <button onClick={()=>onPreview(slot)} className="btn bg-violet-400 text-white px-5 py-2 t-sm">▶ 들어보기</button>
+          <button onClick={()=>onClear(slot)} className="btn bg-amber-300 text-amber-900 px-5 py-2 t-sm">🔁 다시</button>
+        </div>
+      )}
+      {!info && !recording && (
+        <div className="t-sm text-slate-400 text-center">박수·발구르기·책상 두드림 같은<br/>짧은 소리(5초)를 녹음해요</div>
+      )}
+    </div>
+  );
+}
+
 /* =====================================================
    메인 앱
    ===================================================== */
@@ -380,7 +437,6 @@ function App(){
   const [students,setStudents]=useState([]);
   const [student,setStudent]=useState(null);
   const [speakerOn,setSpeakerOn]=useState(false);
-  const [micGranted,setMicGranted]=useState(false);
 
   const [situation,setSituation]=useState(null);
   const [bpm,setBpm]=useState(100);
@@ -400,11 +456,13 @@ function App(){
   const [preferred,setPreferred]=useState(null);
   const [pairA,setPairA]=useState(null);
   const [pairB,setPairB]=useState(null);
+  const [customSounds,setCustomSounds]=useState({my1:null,my2:null});
 
   const [reflection,setReflection]=useState([]);
   const [session,setSession]=useState({});
 
   const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), recorder=useRef(null);
+  const players=useRef({my1:null,my2:null});
 
   /* scale */
   useEffect(()=>{
@@ -430,9 +488,13 @@ function App(){
     synths.current={
       drum:new Tone.MembraneSynth({pitchDecay:0.05,octaves:4,envelope:{attack:0.001,decay:0.3,sustain:0.01}}).toDestination(),
       triangle:new Tone.FMSynth({harmonicity:1.5,modulationIndex:12,oscillator:{type:'sine'},envelope:{attack:0.001,decay:0.8,sustain:0,release:0.8}}).toDestination(),
-      tambourine:new Tone.MetalSynth({frequency:200,envelope:{attack:0.001,decay:0.1,release:0.01},harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5}).toDestination(),
+      tambourine:new Tone.MetalSynth({frequency:280,envelope:{attack:0.001,decay:0.25,release:0.1},harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5}).toDestination(),
       castanets:new Tone.MembraneSynth({pitchDecay:0.001,octaves:0.1,envelope:{attack:0.001,decay:0.05,sustain:0}}).toDestination(),
     };
+    // 음량 조정 — 탬버린·트라이앵글이 묻히지 않게
+    synths.current.tambourine.volume.value = 8;
+    synths.current.triangle.volume.value = -2;
+
     recorder.current=new Tone.Recorder();
     Tone.getDestination().connect(recorder.current);
 
@@ -441,12 +503,7 @@ function App(){
       let cnt=0;
       gridRef.current.forEach(row=>{
         const id=row[col];
-        if(id){ cnt++; const sy=synths.current[id];
-          if(id==='triangle') sy.triggerAttackRelease('C8','16n',time);
-          else if(id==='tambourine') sy.triggerAttackRelease('16n',time);
-          else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time);
-          else sy.triggerAttackRelease('C2','8n',time);
-        }
+        if(id){ cnt++; playOne(id,time); }
       });
       Tone.Draw.schedule(()=>{
         if(cnt>1) setFeedback('✨ 여러 악기가 함께! 소리가 풍부해져요!');
@@ -456,55 +513,105 @@ function App(){
 
     return ()=>{
       Object.values(synths.current).forEach(s=>s&&s.dispose());
+      Object.values(players.current).forEach(p=>p&&p.dispose());
       if(loop.current) loop.current.dispose();
     };
   },[]);
 
+  /* 한 소리 재생 (time 옵션) */
+  const playOne = (id, time)=>{
+    if(id==='my1'||id==='my2'){
+      const p = players.current[id];
+      if(p && p.loaded){ try{ p.start(time); }catch(e){} }
+      return;
+    }
+    const sy = synths.current[id];
+    if(!sy) return;
+    if(id==='triangle') sy.triggerAttackRelease('C8','16n',time);
+    else if(id==='tambourine') sy.triggerAttackRelease('16n',time);
+    else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time);
+    else sy.triggerAttackRelease('C2','8n',time);
+  };
+
   /* 단계 들어올 때 안내 */
   useEffect(()=>{ if(view==='stage') setShowGuide(true); },[view,stage]);
 
-  /* 헬퍼 — 한 소리 트리거 */
+  /* 한 번만 즉시 재생 */
   const trigger=async(id)=>{
     await Tone.start();
-    const sy=synths.current[id];
+    if(id==='my1'||id==='my2'){
+      const p = players.current[id];
+      if(p && p.loaded){ try{ p.stop(); p.start(); }catch(e){} }
+      return;
+    }
+    const sy=synths.current[id]; if(!sy) return;
     if(id==='triangle') sy.triggerAttackRelease('C8','16n');
     else if(id==='tambourine') sy.triggerAttackRelease('16n');
     else if(id==='castanets') sy.triggerAttackRelease('C5','32n');
     else sy.triggerAttackRelease('C2','8n');
   };
 
-  /* 헬퍼 — 패턴 한 번 재생 */
+  /* 8박 패턴 한 번 재생 */
   const playPreset = async (pattern, instId='drum', useBpm=null)=>{
     await Tone.start();
-    const sy = synths.current[instId];
     const t0 = Tone.now();
     const beat = 60 / (useBpm||bpm) / 2;
-    pattern.forEach((v,i)=>{
-      if(v){
-        const time = t0 + i*beat;
-        if(instId==='triangle') sy.triggerAttackRelease('C8','16n',time);
-        else if(instId==='tambourine') sy.triggerAttackRelease('16n',time);
-        else if(instId==='castanets') sy.triggerAttackRelease('C5','32n',time);
-        else sy.triggerAttackRelease('C2','8n',time);
-      }
-    });
+    pattern.forEach((v,i)=>{ if(v) playOne(instId, t0 + i*beat); });
   };
 
-  /* 헬퍼 — 두 악기 같이 듣기 (번갈아) */
+  /* 두 악기 "함께" 재생 — 매 박마다 동시에 */
   const playPair = async (a,b)=>{
     if(!a||!b) return;
     await Tone.start();
     const t0 = Tone.now();
     const beat = 60/bpm/2;
     for(let i=0;i<8;i++){
-      const id = i%2===0 ? a : b;
-      const sy = synths.current[id];
       const time = t0 + i*beat;
-      if(id==='triangle') sy.triggerAttackRelease('C8','16n',time);
-      else if(id==='tambourine') sy.triggerAttackRelease('16n',time);
-      else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time);
-      else sy.triggerAttackRelease('C2','8n',time);
+      playOne(a, time);
+      if(a!==b) playOne(b, time);
     }
+  };
+
+  /* 내 소리 슬롯 핸들러 */
+  const onRecordedSound = async (slot, url, blob)=>{
+    // 기존 player 정리
+    if(players.current[slot]){ try{ players.current[slot].dispose(); }catch(e){} }
+    const player = new Tone.Player(url, ()=>{
+      // 로드 완료 후 상태 업데이트
+      setCustomSounds(p=>({...p, [slot]: {url, name: p[slot]?.name||CUSTOM_DEFAULT_NAMES[slot]}}));
+    }).toDestination();
+    players.current[slot] = player;
+    await Tone.loaded();
+    // 보장: 상태 한 번 더
+    setCustomSounds(p=>({...p, [slot]: {url, name: p[slot]?.name||CUSTOM_DEFAULT_NAMES[slot]}}));
+  };
+  const onClearSound = (slot)=>{
+    if(players.current[slot]){ try{ players.current[slot].dispose(); }catch(e){} players.current[slot]=null; }
+    setCustomSounds(p=>({...p, [slot]: null}));
+    // 그리드에서 사용 중인 것도 제거
+    setGrid(g=>g.map(row=>row.map(c=>c===slot?null:c)));
+    if(selectedInst===slot) setSelectedInst('drum');
+  };
+  const onPreviewSound = async (slot)=>{
+    await Tone.start();
+    const p = players.current[slot];
+    if(p && p.loaded){ try{ p.stop(); p.start(); }catch(e){} }
+  };
+  const onRenameSound = (slot, name)=>{
+    setCustomSounds(p=>({...p, [slot]: p[slot]?{...p[slot], name}:{name, url:null}}));
+  };
+
+  /* 현재 단계에서 보이는 악기 목록 */
+  const visibleInstruments = ()=>{
+    if(stage===1) return [INSTRUMENTS[0]];
+    const customs = [];
+    if(customSounds.my1?.url) customs.push({id:'my1', name:customSounds.my1.name||CUSTOM_DEFAULT_NAMES.my1, color:CUSTOM_COLORS.my1, custom:true});
+    if(customSounds.my2?.url) customs.push({id:'my2', name:customSounds.my2.name||CUSTOM_DEFAULT_NAMES.my2, color:CUSTOM_COLORS.my2, custom:true});
+    return [...INSTRUMENTS, ...customs];
+  };
+  const getInstObj = (id)=>{
+    if(id==='my1'||id==='my2') return {id, name:customSounds[id]?.name||CUSTOM_DEFAULT_NAMES[id], color:CUSTOM_COLORS[id], custom:true};
+    return INSTRUMENTS.find(i=>i.id===id);
   };
 
   /* 셀 클릭 */
@@ -528,7 +635,7 @@ function App(){
   const swapAllInstrument=(id)=>{
     setSelectedInst(id); trigger(id);
     setGrid(g=>{ const ng=g.map(r=>[...r]); ng[0]=ng[0].map(c=>c?id:null); return ng; });
-    setFeedback(`${INSTRUMENTS.find(i=>i.id===id).name}(으)로 바꿨어요! 느낌이 어떤가요?`);
+    setFeedback(`${getInstObj(id).name}(으)로 바꿨어요! 느낌이 어떤가요?`);
   };
 
   /* 연주 */
@@ -580,10 +687,12 @@ function App(){
     setFeedback(STAGE_INFO[n].short);
   };
 
-  /* 뒤로 가기 매핑 */
+  /* 뒤로 가기 */
   const goBack = ()=>{
     stopAll();
-    if(view==='tempo') setView('situation');
+    if(view==='mySounds') setView('prerecord');
+    else if(view==='situation') setView('mySounds');
+    else if(view==='tempo') setView('situation');
     else if(view==='stage' && stage===1) setView('tempo');
     else if(view==='rule') { setStage(1); setView('stage'); }
     else if(view==='stage' && stage===2) setView('rule');
@@ -603,15 +712,16 @@ function App(){
       preRecordText: session.preRecordText||'', preRecordUrl: session.preRecordUrl||'',
       preHelp: session.preHelp, preSticker: session.preSticker||'',
       stage1Pattern: grid[0].map(c=>c?'■':'·').join(''),
-      stage2Instrument: selectedInst,
+      stage2Instrument: getInstObj(selectedInst)?.name||selectedInst,
       stage3Pattern: grid.map(r=>r.map(c=>c?'■':'·').join('')).join(' / '),
       musicUrl: session.musicUrl||'',
       reflectionItems: [
         ...reflection,
         chosenRule? '발견한 규칙: '+(RULE_PATTERNS.find(r=>r.id===chosenRule)?.label||'') : '',
-        preferred? '가장 좋아한 악기: '+(INSTRUMENTS.find(i=>i.id===preferred)?.name||'') : '',
-        (pairA&&pairB)? '어울리는 짝꿍: '+INSTRUMENTS.find(i=>i.id===pairA).name+' + '+INSTRUMENTS.find(i=>i.id===pairB).name : '',
+        preferred? '가장 좋아한 악기: '+(getInstObj(preferred)?.name||'') : '',
+        (pairA&&pairB)? '어울리는 짝꿍: '+getInstObj(pairA).name+' + '+getInstObj(pairB).name : '',
         '빠르기: '+bpm+' BPM',
+        (customSounds.my1?.url||customSounds.my2?.url)? '내 소리: '+[customSounds.my1?.name, customSounds.my2?.name].filter(Boolean).join(', ') : '',
       ].filter(Boolean).join(' / '),
       postRecordText: session.postRecordText||'', postRecordUrl: session.postRecordUrl||'',
       postHelp: session.postHelp, postSticker: session.postSticker||'',
@@ -620,7 +730,6 @@ function App(){
     await api.saveData(data);
   };
 
-  /* 공통 뒤로 버튼 */
   const BackBtn = ()=>(
     <button className="btn back-btn bg-slate-300 text-slate-600 px-5 py-2 t-sm" onClick={goBack}>← 이전</button>
   );
@@ -629,7 +738,6 @@ function App(){
   return (
     <div style={{width:1280,height:800,position:'relative',padding:24}}>
 
-      {/* 스피커 토글 */}
       {view!=='login' && (
         <button onClick={()=>setSpeakerOn(!speakerOn)}
           className={"btn absolute top-6 right-6 px-6 py-3 t-mid z-50 "+(speakerOn?'bg-emerald-400 text-white':'bg-slate-300 text-slate-600')}>
@@ -653,10 +761,8 @@ function App(){
               onClick={async()=>{
                 if(!student){ alert('이름을 선택하세요!'); return; }
                 await Tone.start();
-                try{
-                  const st=await navigator.mediaDevices.getUserMedia({audio:true});
-                  st.getTracks().forEach(t=>t.stop()); setMicGranted(true);
-                }catch(e){ setMicGranted(false); alert('마이크 없이도 괜찮아요! 글자로 입력할 수 있어요.'); }
+                try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); }
+                catch(e){ alert('마이크 없이도 괜찮아요! 글자로 입력할 수 있어요.'); }
                 setView('prerecord');
               }}>출발! 🚀</button>
           </div>
@@ -673,14 +779,35 @@ function App(){
               setSession(p=>({...p,preRecordText:r.text,preHelp:r.helpUsed,preSticker:r.sticker}));
               if(r.b64){ const res=await api.saveRecording({studentName:student.name,phase:'pre',audioBase64:r.b64,mimeType:'audio/webm'});
                 if(res.ok) setSession(p=>({...p,preRecordUrl:res.fileUrl})); }
-              setView('situation');
+              setView('mySounds');
             }}/>
+        </div>
+      )}
+
+      {/* ---- 내 소리 만들기 ---- */}
+      {view==='mySounds' && (
+        <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
+          <BackBtn/>
+          <h2 className="t-huge text-indigo-700">🌿 주변 소리를 내 악기로 만들어요</h2>
+          <p className="t-mid text-slate-500">박수·발구르기·책상 두드림 같은 짧은 소리를 녹음해서<br/>나만의 악기로 써봐요 (최대 2개)</p>
+          <div className="flex gap-6">
+            <CustomSoundSlot slot="my1" info={customSounds.my1}
+              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound} onRename={onRenameSound}/>
+            <CustomSoundSlot slot="my2" info={customSounds.my2}
+              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound} onRename={onRenameSound}/>
+          </div>
+          <p className="t-sm text-slate-400 text-center max-w-[760px]">
+            녹음하지 않고 넘어가도 괜찮아요. 기본 악기 4개로도 멋진 음악을 만들 수 있어요!
+          </p>
+          <button onClick={()=>setView('situation')}
+            className="btn bg-indigo-600 text-white t-big px-12 py-4">다음으로 →</button>
         </div>
       )}
 
       {/* ---- 상황 선택 ---- */}
       {view==='situation' && (
         <div className="h-full flex flex-col items-center justify-center gap-5 fade-in">
+          <BackBtn/>
           <h2 className="t-huge text-indigo-700">어떤 장면의 음악을 만들어볼까요?</h2>
           <p className="t-mid text-slate-500">장면을 고르면 어울리는 빠르기로 시작해요</p>
           <div className="flex gap-6">
@@ -700,7 +827,7 @@ function App(){
         </div>
       )}
 
-      {/* ---- 빠르기 듣기·정하기 ---- */}
+      {/* ---- 빠르기 ---- */}
       {view==='tempo' && (
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
           <BackBtn/>
@@ -735,7 +862,7 @@ function App(){
         </div>
       )}
 
-      {/* ---- 단계 (음악 만들기) ---- */}
+      {/* ---- 단계 ---- */}
       {view==='stage' && (
         <div className="h-full flex flex-col fade-in">
           {stage>1 && <BackBtn/>}
@@ -758,17 +885,17 @@ function App(){
             <div className="t-big text-indigo-700 whitespace-nowrap">{STAGE_INFO[stage].title}</div>
           </div>
 
-          <div className="flex justify-center gap-3 mb-2">
-            {INSTRUMENTS.filter(i=>stage===1?i.id==='drum':true).map(inst=>(
+          <div className="flex justify-center gap-3 mb-2 flex-wrap">
+            {visibleInstruments().map(inst=>(
               <div key={inst.id}
                 onClick={()=>{
                   if(stage===2){ swapAllInstrument(inst.id); }
                   else { setSelectedInst(inst.id); trigger(inst.id); setFeedback(`${inst.name} 선택! 빈 칸을 눌러요.`); }
                 }}
                 className={"inst-card "+(selectedInst===inst.id?'sel':'')}
-                style={{width:128,height:104,padding:6,background:selectedInst===inst.id?inst.color:'rgba(255,255,255,0.78)'}}>
-                <InstIcon type={inst.id} size={50}/>
-                <span className="t-sm mt-1 text-slate-700">{inst.name}</span>
+                style={{width:118,height:104,padding:6,background:selectedInst===inst.id?inst.color:'rgba(255,255,255,0.78)'}}>
+                <InstIcon type={inst.id} size={48}/>
+                <span className="t-sm mt-1 text-slate-700 text-center" style={{lineHeight:1.1,fontSize:inst.name.length>5?16:20}}>{inst.name}</span>
               </div>
             ))}
           </div>
@@ -786,7 +913,7 @@ function App(){
                   return (
                     <div key={r} className="flex gap-2 justify-center">
                       {row.map((cell,c)=>{
-                        const inst=cell?INSTRUMENTS.find(i=>i.id===cell):null;
+                        const inst=cell?getInstObj(cell):null;
                         const sz=stage===3?74:92;
                         return (
                           <div key={c} onClick={()=>handleCell(r,c)}
@@ -824,7 +951,7 @@ function App(){
         </div>
       )}
 
-      {/* ---- 규칙 탐험 (1단계 → 2단계 사이) ---- */}
+      {/* ---- 규칙 탐험 ---- */}
       {view==='rule' && (
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in">
           <BackBtn/>
@@ -838,8 +965,7 @@ function App(){
                 <div className="t-big text-indigo-700">{rp.label}</div>
                 <div className="flex gap-1 justify-center">
                   {rp.pattern.map((v,i)=>(
-                    <div key={i} style={{width:20,height:20,borderRadius:6,
-                      background:v?'#7c6cf0':'#e5e0f5'}}/>
+                    <div key={i} style={{width:20,height:20,borderRadius:6, background:v?'#7c6cf0':'#e5e0f5'}}/>
                   ))}
                 </div>
                 <div className="t-sm text-slate-500">{rp.desc}</div>
@@ -860,25 +986,25 @@ function App(){
         </div>
       )}
 
-      {/* ---- 좋아하는 악기 (2단계 → 짝꿍 찾기 사이) ---- */}
+      {/* ---- 좋아하는 악기 ---- */}
       {view==='preference' && (
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
           <BackBtn/>
           <h2 className="t-huge text-indigo-700">❤️ 가장 마음에 든 악기는?</h2>
           <p className="t-mid text-slate-500">눌러서 들어보고, 가장 좋았던 악기를 골라봐요</p>
-          <div className="flex gap-5">
-            {INSTRUMENTS.map(inst=>(
+          <div className="flex gap-4 flex-wrap justify-center">
+            {visibleInstruments().map(inst=>(
               <button key={inst.id} onClick={()=>{ trigger(inst.id); setPreferred(inst.id); }}
-                className={"card p-4 w-[200px] flex flex-col items-center gap-2 transition-transform "+
+                className={"card p-4 w-[180px] flex flex-col items-center gap-2 transition-transform "+
                   (preferred===inst.id?'ring-8 ring-pink-300 scale-105':'hover:scale-102')}
                 style={{background:preferred===inst.id?inst.color:undefined}}>
-                <InstIcon type={inst.id} size={72}/>
-                <div className="t-big text-slate-700">{inst.name}</div>
+                <InstIcon type={inst.id} size={64}/>
+                <div className="t-mid text-slate-700 text-center" style={{lineHeight:1.1}}>{inst.name}</div>
                 <div className="t-sm text-indigo-500">🔊 눌러서 듣기</div>
               </button>
             ))}
           </div>
-          <p className="t-sm text-slate-400 text-center max-w-[760px]">취향은 사람마다 달라요. 정답은 없어요! 마음 가는 것을 골라요.</p>
+          <p className="t-sm text-slate-400 text-center max-w-[760px]">취향은 사람마다 달라요. 정답은 없어요!</p>
           <button onClick={()=>setView('pair')} disabled={!preferred}
             className="btn bg-indigo-600 text-white t-big px-12 py-4">{preferred?'다음으로 →':'하나 골라요'}</button>
         </div>
@@ -889,9 +1015,9 @@ function App(){
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
           <BackBtn/>
           <h2 className="t-huge text-indigo-700">🤝 어떤 악기가 함께 어울릴까요?</h2>
-          <p className="t-mid text-slate-500">악기 두 개를 골라서 함께 들어봐요</p>
-          <div className="flex gap-5 justify-center">
-            {INSTRUMENTS.map(inst=>{
+          <p className="t-mid text-slate-500">악기 두 개를 골라서 동시에 들어봐요</p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            {visibleInstruments().map(inst=>{
               const badge = pairA===inst.id ? '①' : pairB===inst.id ? '②' : null;
               return (
                 <button key={inst.id}
@@ -902,20 +1028,19 @@ function App(){
                     else if(!pairB){ setPairB(inst.id); trigger(inst.id); }
                     else { setPairA(pairB); setPairB(inst.id); trigger(inst.id); }
                   }}
-                  className={"card p-4 w-[200px] flex flex-col items-center gap-2 relative transition-transform "+
+                  className={"card p-4 w-[180px] flex flex-col items-center gap-2 relative transition-transform "+
                     (badge?'scale-105':'hover:scale-102')}
                   style={{background:badge?inst.color:undefined}}>
                   {badge && <div className="absolute top-2 right-2 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center text-3xl text-indigo-600">{badge}</div>}
-                  <InstIcon type={inst.id} size={68}/>
-                  <div className="t-big text-slate-700">{inst.name}</div>
+                  <InstIcon type={inst.id} size={60}/>
+                  <div className="t-mid text-slate-700 text-center" style={{lineHeight:1.1}}>{inst.name}</div>
                 </button>
               );
             })}
           </div>
-          <div className="t-sm text-slate-500">{pairA&&pairB?'두 악기를 골랐어요! 들어볼까요?':'악기를 두 개 골라요'}</div>
+          <div className="t-sm text-slate-500">{pairA&&pairB?'두 악기를 골랐어요! 함께 들어볼까요?':'악기를 두 개 골라요'}</div>
           <button onClick={()=>playPair(pairA,pairB)} disabled={!pairA||!pairB}
-            className="btn bg-emerald-500 text-white t-big px-9 py-4">▶ 두 악기 함께 듣기</button>
-          <p className="t-sm text-slate-400 text-center max-w-[760px]">다른 짝꿍도 들어볼 수 있어요. 정답은 없어요!</p>
+            className="btn bg-emerald-500 text-white t-big px-9 py-4">▶ 두 악기 동시에 듣기</button>
           <button onClick={()=>goStage(3)} disabled={!pairA||!pairB}
             className="btn bg-indigo-600 text-white t-big px-12 py-4">이 짝꿍으로 정할게요 →</button>
         </div>
@@ -934,6 +1059,7 @@ function App(){
               '여러 악기를 함께 연주하면 소리가 풍부해져요',
               '빠르기에 따라 장면의 느낌이 달라져요',
               '음악에는 일정한 박과 규칙이 있어요',
+              '주변 소리도 멋진 악기가 될 수 있어요',
             ].map(item=>(
               <button key={item} onClick={()=>setReflection(p=>p.includes(item)?p.filter(x=>x!==item):[...p,item])}
                 className={"card p-4 t-mid text-left transition-transform "+
@@ -947,7 +1073,7 @@ function App(){
         </div>
       )}
 
-      {/* ---- 발표 녹음 ---- */}
+      {/* ---- 발표 ---- */}
       {view==='postrecord' && (
         <div className="h-full flex flex-col items-center justify-center gap-5 fade-in">
           <BackBtn/>
@@ -957,7 +1083,7 @@ function App(){
               '달팽이처럼 천천히 칸을 띄엄띄엄 채웠어요.',
               '친구가 뛰는 것처럼 빠르게 만들었어요.',
               '두 박마다 작은 북을 넣어 규칙을 만들었어요.',
-              '제가 좋아하는 탬버린과 트라이앵글을 짝꿍으로 골랐어요.',
+              '내가 녹음한 박수 소리를 악기로 썼어요.',
             ]}
             onComplete={async(r)=>{
               setSession(p=>({...p,postRecordText:r.text,postHelp:r.helpUsed,postSticker:r.sticker}));
@@ -1022,14 +1148,9 @@ function App(){
                 이 증서를 드립니다.
               </p>
             </div>
-            <div className="bg-indigo-50 py-4 px-10 flex items-center justify-between border-t-4 border-indigo-100">
-              <div className="t-sm text-slate-500 text-left">관련 성취기준<br/>
-                <span className="t-mid text-indigo-600">[2즐02-04] 우리의 생각이나 느낌을 다양하게 표현한다.</span>
-              </div>
-              <div className="text-right">
-                <div className="t-mid text-slate-500">{new Date().toLocaleDateString('ko-KR')}</div>
-                <div className="text-5xl">🎖️</div>
-              </div>
+            <div className="bg-indigo-50 py-5 px-10 flex items-center justify-center gap-10 border-t-4 border-indigo-100">
+              <div className="text-6xl">🎖️</div>
+              <div className="t-big text-indigo-600">{new Date().toLocaleDateString('ko-KR')}</div>
             </div>
           </div>
           <button className="btn bg-indigo-600 text-white t-big px-12 py-4" onClick={()=>window.location.reload()}>처음으로 돌아가기</button>
