@@ -300,7 +300,7 @@ async function concatTakes(takes){
   }
 }
 
-async function trimSilence(blob){
+async function trimSilence(blob, threshold = 0.015){
   let ctx = null;
   try{
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -308,7 +308,6 @@ async function trimSilence(blob){
     const buf = await ctx.decodeAudioData(arr.slice(0));
     const data = buf.getChannelData(0);
     const sr = buf.sampleRate;
-    const threshold = 0.015;
     let start = 0;
     let found = false;
     for(let i=0; i<data.length; i++){
@@ -335,6 +334,28 @@ async function trimSilence(blob){
     if(ctx){ try{ctx.close();}catch(_){} }
     return null;
   }
+}
+
+/* ===== 세션 자동 저장/복원 (localStorage) =====
+   같은 브라우저로 이어할 때 진행 상태를 복원.
+   주의: 오디오 blob URL은 저장 안 됨 → 작품(녹음)은 다시 만들어야 함,
+        선택/진행 상태만 복원 가능. 학교 운영상 차시 분리에 유용. */
+const SESSION_KEY = (name)=>`sori_explorer:${name}`;
+function saveLocalSession(studentName, data){
+  if(!studentName) return;
+  try{ localStorage.setItem(SESSION_KEY(studentName), JSON.stringify(data)); }
+  catch(e){ console.warn('세션 저장 실패:', e); }
+}
+function loadLocalSession(studentName){
+  if(!studentName) return null;
+  try{
+    const r = localStorage.getItem(SESSION_KEY(studentName));
+    return r ? JSON.parse(r) : null;
+  }catch(e){ return null; }
+}
+function clearLocalSession(studentName){
+  if(!studentName) return;
+  try{ localStorage.removeItem(SESSION_KEY(studentName)); }catch(e){}
 }
 
 /* ===== 기본 데이터 (모드 불변) ===== */
@@ -398,11 +419,11 @@ const getRulePatterns = (ts)=> {
 };
 
 const STAGE_INFO = {
-  1:{title:'1단계 · 박 만들기', short:'작은 북을 빈 칸에 콕콕!',
+  1:{title:'🥁 박 만들기', short:'작은 북을 빈 칸에 콕콕! 박자를 만들어볼까?',
      steps:['빈 칸을 한 번 누르면 작은 북이 들어가요.','같은 칸을 다시 누르면 작은 북이 빠져요.','다 만들었으면 아래 [연주 ▶] 를 눌러 들어봐요.']},
-  2:{title:'2단계 · 악기 바꾸기', short:'박자는 그대로, 악기만 바꿔봐요.',
+  2:{title:'🎵 악기 바꿔보기', short:'박자는 그대로! 악기만 바꿔보면 느낌이 달라져!',
      steps:['위쪽에서 다른 악기를 한 번 눌러보세요.','모든 칸의 악기가 한 번에 바뀌어요.','[연주 ▶] 로 느낌이 어떻게 다른지 들어봐요.']},
-  3:{title:'3단계 · 자유롭게 섞기', short:'내 악기로 자유롭게 만들어요',
+  3:{title:'✨ 자유롭게 섞기', short:'이제 진짜 음악가! 내 악기로 자유롭게 만들어봐!',
      steps:['🔬 진짜 탐구! 넣기 전에 어떤 소리일지 입으로 먼저 상상해봐요.','악기를 고른 다음, 빈 칸을 눌러 넣어요.','한 칸 넣을 때마다 [▶ 연주]로 확인하고, 다르면 수정해봐요.','같은 칸에 다른 줄 악기를 놓으면 함께 울려요.','마음에 들면 [🎵 음악 녹음]으로 작품 저장!']},
 };
 
@@ -749,32 +770,42 @@ function CharBubble({mode, text, big=false}){
   );
 }
 
+/* 큰 단계 + 차시 매핑 (교사 운영 가이드)
+   3차시 운영 권장: 1차시 = 도입+소리, 2차시 = 음악 만들기 (핵심), 3차시 = 정리+발표
+   각 차시 약 40분 기준 */
 const BIG_STEPS = [
-  {key:'start',  label:'시작',     views:['login','mode']},
-  {key:'sound',  label:'소리 모으기', views:['prerecord','mySounds']},
-  {key:'make',   label:'음악 만들기', views:['situation','tempo','beatPick','stage','rule','preference','pair']},
-  {key:'reflect',label:'마음 정리',   views:['reflection','postrecord','eval']},
-  {key:'end',    label:'끝맺음',     views:['cert','groupShow']},
+  {key:'start',  label:'시작',     cha:1, views:['login','mode']},
+  {key:'sound',  label:'소리 모으기', cha:1, views:['prerecord','mySounds']},
+  {key:'make',   label:'음악 만들기', cha:2, views:['situation','tempo','beatPick','stage','rule','preference','pair']},
+  {key:'reflect',label:'마음 정리',   cha:3, views:['reflection','postrecord','eval']},
+  {key:'end',    label:'끝맺음',     cha:3, views:['cert','groupShow']},
 ];
 function ProgressDots({view, mode}){
   const idx = BIG_STEPS.findIndex(s=>s.views.includes(view));
   if(idx<0 || view==='login') return null;
   const color = mode?.color || '#7c6cf0';
+  const currentCha = BIG_STEPS[idx].cha;
   return (
-    <div className="absolute top-6 left-1/2" style={{transform:'translateX(-50%)', zIndex:30, display:'flex', gap:8, alignItems:'center'}}>
-      {BIG_STEPS.map((s,i)=>(
-        <div key={s.key} className="flex items-center gap-1">
-          <div style={{
-            width: i===idx?42:20, height:20, borderRadius:10,
-            background: i<=idx?color:'rgba(255,255,255,0.6)',
-            border: '2px solid white',
-            boxShadow:'0 2px 6px rgba(0,0,0,0.15)',
-            transition:'all .2s',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            color:'white', fontSize:11, fontWeight:'bold'
-          }}>{i===idx?s.label:''}</div>
-        </div>
-      ))}
+    <div className="absolute top-6 left-1/2" style={{transform:'translateX(-50%)', zIndex:30, display:'flex', flexDirection:'column', gap:4, alignItems:'center'}}>
+      <div style={{
+        background:'rgba(255,255,255,0.9)', color:color, fontSize:13, fontWeight:'bold',
+        padding:'2px 12px', borderRadius:999, boxShadow:'0 2px 6px rgba(0,0,0,0.12)'
+      }}>📚 {currentCha}차시</div>
+      <div style={{display:'flex', gap:8, alignItems:'center'}}>
+        {BIG_STEPS.map((s,i)=>(
+          <div key={s.key} className="flex items-center gap-1">
+            <div style={{
+              width: i===idx?42:20, height:20, borderRadius:10,
+              background: i<=idx?color:'rgba(255,255,255,0.6)',
+              border: '2px solid white',
+              boxShadow:'0 2px 6px rgba(0,0,0,0.15)',
+              transition:'all .2s',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              color:'white', fontSize:11, fontWeight:'bold'
+            }}>{i===idx?s.label:''}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1003,6 +1034,13 @@ function App(){
   const [session,setSession]=useState({});
   const [startedAt] = useState(Date.now()); // 학습 시작 시각 (결과 페이지 학습 시간 계산)
 
+  // 세션 복원 + 마이크 옵션
+  const [savedSession,setSavedSession]=useState(null);     // 로그인 시 발견된 이전 세션
+  const [showResumeDialog,setShowResumeDialog]=useState(false);
+  const [micThreshold,setMicThreshold]=useState(0.015);    // 마이크 감도 (보통 0.015, 민감 0.008)
+  const [showSettings,setShowSettings]=useState(false);
+  const [resuming,setResuming]=useState(false);            // 복원 직후엔 자동저장 잠깐 끔
+
   const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), recorder=useRef(null);
   const players=useRef({my1:null,my2:null});
   const loopCount=useRef(0), lastCol=useRef(-1);
@@ -1024,6 +1062,37 @@ function App(){
   useEffect(()=>{ speakerRef.current=speakerOn; },[speakerOn]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ Tone.Transport.bpm.value=bpm; },[bpm]);
+
+  // 핵심 진행 상태 자동 저장 (localStorage) — 같은 브라우저로 이어할 때 복원 가능
+  // 주의: musicTakes/customSounds의 오디오 URL은 blob이라 저장 안 됨 (이름만 저장)
+  useEffect(()=>{
+    if(!student?.name) return;
+    if(view==='login') return;        // 로그인 화면에선 저장 안 함
+    if(view==='cert') return;          // 수료 완료 시점엔 별도 저장 (saveAll)
+    if(view==='groupShow') return;
+    if(resuming) return;               // 복원 직후 1틱은 저장 안 함 (덮어쓰기 방지)
+    const data = {
+      view,
+      mode: mode?.id || null,
+      stage, timeSig, bpm,
+      situation: situation?.id || null,
+      grid,
+      chosenRule,
+      favorites, favoriteWhy,
+      pairA, pairB, pairTried,
+      reflection,
+      session,
+      customSoundNames: {
+        my1: customSounds.my1?.name || null,
+        my2: customSounds.my2?.name || null,
+      },
+      beatHeard,
+      savedAt: Date.now(),
+    };
+    saveLocalSession(student.name, data);
+  },[view, mode, stage, timeSig, bpm, situation, grid, chosenRule,
+     favorites, favoriteWhy, pairA, pairB, pairTried, reflection, session,
+     customSounds, beatHeard, student, resuming]);
 
   useEffect(()=>{
     if(mode && view!=='login' && view!=='mode'){
@@ -1211,7 +1280,7 @@ function App(){
     if(players.current[slot]){ try{ players.current[slot].dispose(); }catch(e){} }
     setPreviewed(p=>({...p, [slot]:false}));
 
-    const trimmedUrl = await trimSilence(blob);
+    const trimmedUrl = await trimSilence(blob, micThreshold);
 
     let silent = false;
     const targetUrl = trimmedUrl || url;
@@ -1529,10 +1598,17 @@ function App(){
     <div style={{width:1280,height:800,position:'relative',padding:24}}>
 
       {view!=='login' && (
-        <button onClick={()=>setSpeakerOn(!speakerOn)}
-          className={"btn absolute top-6 right-6 px-6 py-3 t-mid z-50 "+(speakerOn?'bg-emerald-400 text-white':'bg-slate-300 text-slate-600')}>
-          {speakerOn?'🔊 소리 켜짐':'🔇 소리 꺼짐'}
-        </button>
+        <>
+          <button onClick={()=>setSpeakerOn(!speakerOn)}
+            className={"btn absolute top-6 right-6 px-6 py-3 t-mid z-50 "+(speakerOn?'bg-emerald-400 text-white':'bg-slate-300 text-slate-600')}>
+            {speakerOn?'🔊 소리 켜짐':'🔇 소리 꺼짐'}
+          </button>
+          <button onClick={()=>setShowSettings(true)}
+            className="btn absolute top-6 right-[228px] px-4 py-3 t-mid z-50 bg-white text-slate-600"
+            title="설정 (마이크 감도)">
+            ⚙️
+          </button>
+        </>
       )}
 
       {view!=='login' && view!=='mode' && (
@@ -1572,8 +1648,109 @@ function App(){
                 await Tone.start();
                 try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); }
                 catch(e){ alert('마이크 없이도 괜찮아요! 글자로 입력할 수 있어요.'); }
-                setView('mode');
+                // 이전 세션 검사 — 진행 중인 게 있으면 이어할지 묻기
+                const prev = loadLocalSession(student.name);
+                if(prev && prev.view && prev.view!=='login' && prev.view!=='cert'){
+                  setSavedSession(prev);
+                  setShowResumeDialog(true);
+                } else {
+                  setView('mode');
+                }
               }}>출발! 🚀</button>
+          </div>
+        </div>
+      )}
+
+      {/* 이어하기 다이얼로그 — 로그인 시 이전 세션 발견 */}
+      {showResumeDialog && savedSession && (
+        <div className="modal-bg" onClick={()=>{}}>
+          <div className="card p-8 w-[640px] text-center" onClick={e=>e.stopPropagation()}>
+            <div className="text-6xl mb-3">🌱</div>
+            <div className="t-huge text-indigo-700 mb-2">{student?.name} 님,</div>
+            <div className="t-big text-slate-600 mb-4">이전에 하던 활동이 있어요!</div>
+            <div className="card p-4 mb-5" style={{background:'rgba(254,243,199,0.6)', borderColor:'#fbbf24'}}>
+              <div className="t-mid text-amber-900">
+                {savedSession.mode && <div>📍 마지막으로 한 활동: <b>{MODES[savedSession.mode]?.label || savedSession.mode}</b></div>}
+                {savedSession.savedAt && <div className="t-sm text-amber-700 mt-1">
+                  💾 저장: {new Date(savedSession.savedAt).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'numeric', minute:'numeric'})}
+                </div>}
+                <div className="t-xs text-amber-700 mt-2" style={{lineHeight:1.4}}>
+                  ⚠️ 녹음한 소리는 다시 만들어야 해요<br/>(선택했던 것만 살아 있어요)
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <button className="btn bg-emerald-500 text-white px-7 py-3 t-mid"
+                onClick={()=>{
+                  setResuming(true);
+                  const s = savedSession;
+                  if(s.mode && MODES[s.mode]) setMode(MODES[s.mode]);
+                  if(s.stage) setStage(s.stage);
+                  if(s.timeSig) setTimeSig(s.timeSig);
+                  if(s.bpm) setBpm(s.bpm);
+                  if(s.situation && s.mode && MODES[s.mode]){
+                    const sit = MODES[s.mode].situations.find(x=>x.id===s.situation);
+                    if(sit) setSituation(sit);
+                  }
+                  if(s.grid) setGrid(s.grid);
+                  if(s.chosenRule) setChosenRule(s.chosenRule);
+                  if(s.favorites) setFavorites(s.favorites);
+                  if(s.favoriteWhy) setFavoriteWhy(s.favoriteWhy);
+                  if(s.pairA) setPairA(s.pairA);
+                  if(s.pairB) setPairB(s.pairB);
+                  if(s.pairTried) setPairTried(s.pairTried);
+                  if(s.reflection) setReflection(s.reflection);
+                  if(s.session) setSession(s.session);
+                  if(s.beatHeard) setBeatHeard(s.beatHeard);
+                  if(s.customSoundNames){
+                    setCustomSounds({
+                      my1: s.customSoundNames.my1 ? {name: s.customSoundNames.my1, url: null} : null,
+                      my2: s.customSoundNames.my2 ? {name: s.customSoundNames.my2, url: null} : null,
+                    });
+                  }
+                  const safeView = (s.view==='cert' || s.view==='groupShow') ? 'mode' : s.view;
+                  setView(safeView);
+                  setShowResumeDialog(false);
+                  setTimeout(()=>setResuming(false), 100);
+                }}>📂 이어하기</button>
+              <button className="btn bg-amber-300 text-amber-900 px-7 py-3 t-mid"
+                onClick={()=>{
+                  clearLocalSession(student.name);
+                  setSavedSession(null);
+                  setShowResumeDialog(false);
+                  setView('mode');
+                }}>🆕 처음부터</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 설정 모달 — 마이크 감도 */}
+      {showSettings && (
+        <div className="modal-bg" onClick={()=>setShowSettings(false)}>
+          <div className="card p-7 w-[520px]" onClick={e=>e.stopPropagation()}>
+            <div className="t-huge text-indigo-700 mb-4 text-center">⚙️ 설정</div>
+            <div className="card p-4 mb-3" style={{background:'rgba(254,243,199,0.6)', borderColor:'#fbbf24'}}>
+              <div className="t-mid text-amber-900 mb-2 font-bold">🎤 마이크 감도</div>
+              <div className="t-sm text-amber-800 mb-3" style={{lineHeight:1.4}}>
+                작은 소리도 잡고 싶으면 <b>민감</b>으로!<br/>
+                노트북 마이크가 약하거나 박수가 잘 안 잡힐 때 권장
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setMicThreshold(0.015)}
+                  className={"btn flex-1 px-4 py-3 t-mid "+
+                    (micThreshold===0.015?'bg-indigo-500 text-white':'bg-white text-slate-600')}>
+                  🎵 보통 (기본)
+                </button>
+                <button onClick={()=>setMicThreshold(0.008)}
+                  className={"btn flex-1 px-4 py-3 t-mid "+
+                    (micThreshold===0.008?'bg-indigo-500 text-white':'bg-white text-slate-600')}>
+                  🔊 민감 (작은 소리도)
+                </button>
+              </div>
+            </div>
+            <button className="btn bg-indigo-500 text-white px-7 py-3 t-mid w-full"
+              onClick={()=>setShowSettings(false)}>닫기</button>
           </div>
         </div>
       )}
@@ -2064,7 +2241,7 @@ function App(){
           </div>
           <button className="btn bg-indigo-600 text-white t-big px-12 py-4"
             disabled={!session.selfScore}
-            onClick={async()=>{ await saveAll(); confetti(); fx.yay(); setView('cert'); }}>
+            onClick={async()=>{ await saveAll(); if(student?.name) clearLocalSession(student.name); confetti(); fx.yay(); setView('cert'); }}>
             {session.selfScore?'수료증 받기! 🏆':'별점을 골라요'}
           </button>
         </div>
