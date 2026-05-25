@@ -814,22 +814,25 @@ function ProgressDots({view, mode}){
   const color = mode?.color || '#7c6cf0';
   const currentCha = BIG_STEPS[idx].cha;
   return (
-    <div className="absolute top-6 left-1/2" style={{transform:'translateX(-50%)', zIndex:30, display:'flex', flexDirection:'column', gap:4, alignItems:'center'}}>
+    <div className="absolute top-6 left-1/2" style={{transform:'translateX(-50%)', zIndex:30,
+        display:'flex', gap:8, alignItems:'center'}}>
       <div style={{
-        background:'rgba(255,255,255,0.9)', color:color, fontSize:13, fontWeight:'bold',
-        padding:'2px 12px', borderRadius:999, boxShadow:'0 2px 6px rgba(0,0,0,0.12)'
+        background:'rgba(255,255,255,0.92)', color:color, fontSize:12, fontWeight:'bold',
+        padding:'3px 10px', borderRadius:99, boxShadow:'0 2px 6px rgba(0,0,0,0.12)',
+        whiteSpace:'nowrap'
       }}>📚 {currentCha}차시</div>
-      <div style={{display:'flex', gap:8, alignItems:'center'}}>
+      <div style={{display:'flex', gap:6, alignItems:'center'}}>
         {BIG_STEPS.map((s,i)=>(
           <div key={s.key} className="flex items-center gap-1">
             <div style={{
-              width: i===idx?42:20, height:20, borderRadius:10,
-              background: i<=idx?color:'rgba(255,255,255,0.6)',
+              width: i===idx?70:16, height:18, borderRadius:9,
+              background: i<=idx?color:'rgba(255,255,255,0.7)',
               border: '2px solid white',
-              boxShadow:'0 2px 6px rgba(0,0,0,0.15)',
+              boxShadow:'0 2px 5px rgba(0,0,0,0.12)',
               transition:'all .2s',
               display:'flex', alignItems:'center', justifyContent:'center',
-              color:'white', fontSize:11, fontWeight:'bold'
+              color:'white', fontSize:11, fontWeight:'bold',
+              whiteSpace:'nowrap', overflow:'hidden',
             }}>{i===idx?s.label:''}</div>
           </div>
         ))}
@@ -868,7 +871,7 @@ function GuideModal({title, short, steps, onClose}){
 }
 
 /* ===== 박자 미리듣기 카드 — 친근하고 큰 시각 ===== */
-function BeatPickCard({ts, selected, isPlaying, onSelect, onListen}){
+function BeatPickCard({ts, selected, isPlaying, onSelect, onListen, onPlayBeat}){
   const [step,setStep]=useState(-1);
   const [animating,setAnimating]=useState(false);
 
@@ -876,7 +879,8 @@ function BeatPickCard({ts, selected, isPlaying, onSelect, onListen}){
     onSelect();
     setAnimating(true);
     setStep(-1);
-    // BPM 80 정도로 천천히 들려주기 (학생이 음절 따라 읽을 수 있게)
+    // 시각화와 사운드 동시 시작 — BPM 80으로 천천히 (학생이 박자 따라 읽을 수 있게)
+    if(onPlayBeat) onPlayBeat(ts, 80);
     const beatMs = 60/80/2*1000;
     for(let i=0; i<ts.cols; i++){
       setStep(i);
@@ -1288,11 +1292,27 @@ function App(){
     pattern.forEach((v,i)=>{ if(v) playOne(instId, t0 + i*beat); });
   };
 
-  // 박자 비교 청취용
+  // 박자 비교 청취용 (균일)
   const playBeatPattern = async (useBpm=null, ts=null)=>{
     const cols = getTSInfo(ts||timeSig).cols;
     const ptn = Array(cols).fill(1);
     return playPreset(ptn,'drum',useBpm);
+  };
+
+  // 박자 모양 청취용 (강박=크게, 약박=작게) — 4박 "쿵-짝-짝-짝" / 3박 "쿵-짝-짝" 분명히 들림
+  const playBeatPatternAccented = async (useBpm, tsId)=>{
+    await Tone.start();
+    const tsInfo = getTSInfo(tsId);
+    if(!tsInfo) return;
+    const t0 = Tone.now() + 0.05;
+    const beat = 60/useBpm/2;
+    const sy = synths.current.drum;
+    if(!sy) return;
+    tsInfo.accent.forEach((isStrong,i)=>{
+      try{
+        sy.triggerAttackRelease(isStrong?'C2':'C3','8n', t0 + i*beat, isStrong?1.0:0.45);
+      }catch(e){}
+    });
   };
 
   // 장면 선택 시 즉시 미리듣기 — 학생이 "아 이게 이 장면 느낌이구나" 체감
@@ -1645,11 +1665,14 @@ function App(){
       {view!=='login' && (
         <>
           <button onClick={()=>setSpeakerOn(!speakerOn)}
-            className={"btn absolute top-6 right-6 px-6 py-3 t-mid z-50 "+(speakerOn?'bg-emerald-400 text-white':'bg-slate-300 text-slate-600')}>
-            {speakerOn?'🔊 소리 켜짐':'🔇 소리 꺼짐'}
+            className={"btn absolute top-6 right-6 px-3 py-2 z-50 "+(speakerOn?'bg-emerald-400 text-white':'bg-slate-300 text-slate-600')}
+            style={{fontSize:18}}
+            title={speakerOn?'소리 켜짐 (눌러서 끄기)':'소리 꺼짐 (눌러서 켜기)'}>
+            {speakerOn?'🔊':'🔇'}
           </button>
           <button onClick={()=>setShowSettings(true)}
-            className="btn absolute top-6 right-[228px] px-4 py-3 t-mid z-50 bg-white text-slate-600"
+            className="btn absolute top-6 right-[68px] px-3 py-2 z-50 bg-white text-slate-600"
+            style={{fontSize:18}}
             title="설정 (마이크 감도)">
             ⚙️
           </button>
@@ -1659,23 +1682,24 @@ function App(){
       {/* 좌상단 모드 캐릭터 배지 — 모드 분위기 항상 visible (수료증/모둠 화면 제외) */}
       {mode && view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && (
         <div className="absolute top-6 left-6 z-50" style={{
-          display:'flex', alignItems:'center', gap:8,
-          padding:'6px 14px 6px 8px',
+          display:'flex', alignItems:'center', gap:6,
+          padding:'4px 10px 4px 4px',
           borderRadius:99,
           background:'rgba(255,255,255,0.95)',
-          border:'3px solid '+mode.color,
-          boxShadow:'0 4px 14px rgba(0,0,0,0.15)',
+          border:'2px solid '+mode.color,
+          boxShadow:'0 3px 10px rgba(0,0,0,0.12)',
+          maxWidth:200,
         }}>
           <div style={{
-            width:38, height:38, borderRadius:'50%',
+            width:30, height:30, borderRadius:'50%',
             background:mode.color+'22',
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:24,
+            fontSize:18,
             border:'2px solid '+mode.color+'55',
+            flexShrink:0,
           }}>{mode.characterEmoji}</div>
-          <div style={{lineHeight:1.1}}>
-            <div style={{color:mode.color, fontSize:14, fontWeight:'bold'}}>{mode.character}</div>
-            <div style={{color:'#64748b', fontSize:11}}>{mode.label}</div>
+          <div style={{lineHeight:1.05, overflow:'hidden'}}>
+            <div style={{color:mode.color, fontSize:12, fontWeight:'bold', whiteSpace:'nowrap'}}>{mode.character}</div>
           </div>
         </div>
       )}
@@ -2016,7 +2040,8 @@ function App(){
                 selected={timeSig===ts.id}
                 isPlaying={false}
                 onSelect={()=>setTimeSig(ts.id)}
-                onListen={()=>setBeatHeard(prev=>({...prev,[ts.id]:true}))}/>
+                onListen={()=>setBeatHeard(prev=>({...prev,[ts.id]:true}))}
+                onPlayBeat={(tsObj, useBpm)=>playBeatPatternAccented(useBpm, tsObj.id)}/>
             ))}
           </div>
           {(() => {
