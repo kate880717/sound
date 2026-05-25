@@ -95,44 +95,56 @@ textarea,input[type=text]{font-family:'Jua',sans-serif;}
 /* 결과(수료증) 페이지 KPI 셀 - 곱셈 앱 참고, 1-2학년용 큰 폰트 */
 .kpi-cell{
   background:rgba(255,255,255,0.96);
-  border-radius:24px;
-  padding:18px 14px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.12);
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  border:3px solid rgba(255,255,255,0.6);
-  min-height:170px;
+  border-radius:18px;
+  padding:8px 8px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.10);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  border:2px solid rgba(255,255,255,0.6);
+  min-height:118px;
 }
-.kpi-label{font-size:15px;color:#475569;font-weight:bold;letter-spacing:0.3px;
-  display:flex;align-items:center;gap:5px;}
-.kpi-big{font-family:'Jua',sans-serif;font-size:36px;line-height:1;}
-.kpi-small{font-size:13px;color:#64748b;text-align:center;line-height:1.3;}
-.donut-wrap{position:relative;width:110px;height:110px;}
+.kpi-label{font-size:12px;color:#475569;font-weight:bold;letter-spacing:0.2px;
+  display:flex;align-items:center;gap:4px;}
+.kpi-big{font-family:'Jua',sans-serif;font-size:28px;line-height:1;}
+.kpi-small{font-size:11px;color:#64748b;text-align:center;line-height:1.25;}
+.donut-wrap{position:relative;width:78px;height:78px;}
 .donut-svg{width:100%;height:100%;transform:rotate(-90deg);}
 .donut-track{fill:none;stroke:#f1f5f9;stroke-width:14;}
 .donut-fill{fill:none;stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset .8s ease;}
 .donut-label{position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;}
-.donut-pct{font-family:'Jua',sans-serif;font-size:30px;line-height:1;letter-spacing:-0.5px;}
-.donut-frac{font-size:13px;color:#94a3b8;margin-top:2px;}
-/* 결과 페이지 - 격려 chip (1-2학년 친화 큰 크기) */
+.donut-pct{font-family:'Jua',sans-serif;font-size:22px;line-height:1;letter-spacing:-0.5px;}
+.donut-frac{font-size:11px;color:#94a3b8;margin-top:1px;}
+/* 결과 페이지 - 격려 chip (인라인 버전 - 카드 안 헤더에 통합) */
+.cheer-chip-inline{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 18px;border-radius:99px;
+  font-family:'Jua',sans-serif;font-size:18px;
+  border:3px solid;
+  box-shadow:0 3px 10px rgba(0,0,0,0.10);
+  margin-bottom:4px;
+}
+.cheer-chip-inline.best{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;border-color:#fbbf24;}
+.cheer-chip-inline.good{background:linear-gradient(135deg,#dcfce7,#a7f3d0);color:#14532d;border-color:#34d399;}
+.cheer-chip-inline.warm{background:linear-gradient(135deg,#fce7f3,#fbcfe8);color:#831843;border-color:#f472b6;}
+/* (구) cheer-chip — 호환용 보존 */
 .cheer-chip{
-  display:inline-flex;align-items:center;gap:14px;
-  padding:14px 30px;border-radius:99px;
-  font-family:'Jua',sans-serif;font-size:26px;
+  display:inline-flex;align-items:center;gap:12px;
+  padding:8px 24px;border-radius:99px;
+  font-family:'Jua',sans-serif;font-size:22px;
   border:4px solid;
   box-shadow:0 6px 18px rgba(0,0,0,0.14);
 }
 .cheer-chip.best{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;border-color:#fbbf24;}
 .cheer-chip.good{background:linear-gradient(135deg,#dcfce7,#a7f3d0);color:#14532d;border-color:#34d399;}
 .cheer-chip.warm{background:linear-gradient(135deg,#fce7f3,#fbcfe8);color:#831843;border-color:#f472b6;}
-/* 정보 박스 — 더 큰 폰트, 항목 간격 */
+/* 정보 박스 — 컴팩트 */
 .info-line{
-  font-size:17px; line-height:1.5; color:#334155; padding:2px 0;
+  font-size:13px; line-height:1.35; color:#334155; padding:0;
 }
 .info-line b{ font-weight:bold; color:#1e293b; }
-/* 박자 미니 그리드 — 1-2학년용 큰 칸 */
+/* 박자 미니 그리드 */
 .beat-mini-cell{
-  width:30px; height:30px; border-radius:6px;
+  width:20px; height:20px; border-radius:4px;
   transition:transform .15s;
 }
 </style>
@@ -438,10 +450,14 @@ const MODES = {
     cardBg:'rgba(255,255,255,0.92)',
     motto:'광활한 우주를 음악으로 그려요',
     situations:[
-      {id:'sea',    emoji:'🌊', name:'심해 동굴',     desc:'깊은 바다 속', bpm:58, hint:'천천히 떨리는 깊은 소리'},
-      {id:'space',  emoji:'🚀', name:'우주',         desc:'별과 별 사이', bpm:82, hint:'반짝이고 광활한 느낌'},
-      {id:'cave',   emoji:'🕳️', name:'신비한 동굴',   desc:'메아리가 울려요', bpm:72, hint:'천천히 울리는 소리'},
-      {id:'jungle', emoji:'🌳', name:'정글',         desc:'동물과 풀잎 소리', bpm:118, hint:'생기 있는 소리'},
+      {id:'sea',    emoji:'🌊', name:'심해 동굴',     desc:'깊은 바다 속', bpm:58, hint:'천천히 떨리는 깊은 소리',
+        seed:['drum',null,null,null,'drum',null,'triangle',null]},
+      {id:'space',  emoji:'🚀', name:'우주',         desc:'별과 별 사이', bpm:82, hint:'반짝이고 광활한 느낌',
+        seed:['triangle',null,'triangle',null,'triangle',null,'triangle',null]},
+      {id:'cave',   emoji:'🕳️', name:'신비한 동굴',   desc:'메아리가 울려요', bpm:72, hint:'천천히 울리는 소리',
+        seed:['drum',null,null,null,'drum',null,null,null]},
+      {id:'jungle', emoji:'🌳', name:'정글',         desc:'동물과 풀잎 소리', bpm:118, hint:'생기 있는 소리',
+        seed:['drum','castanets','tambourine','castanets','drum','castanets','tambourine','castanets']},
     ],
     preTitle:'어떤 소리가 들릴 것 같나요?',
     preExamples:['깊은 바다에선 우우웅 하는 소리가 날 거예요.','우주에선 별가루 떨어지는 소리가 들릴 것 같아요.','신비한 동굴엔 메아리가 울릴 거예요.','정글에선 동물 소리가 들려요.'],
@@ -467,10 +483,14 @@ const MODES = {
     cardBg:'rgba(255,255,255,0.92)',
     motto:'주변 물건이 악기가 되는 마법',
     situations:[
-      {id:'lively',  emoji:'🎈', name:'신나는 곡', desc:'활기차고 빠른',  bpm:128, hint:'경쾌하게 두드려요!'},
-      {id:'calm',    emoji:'🌙', name:'차분한 곡', desc:'조용하고 느린',  bpm:68,  hint:'천천히 부드럽게.'},
-      {id:'festive', emoji:'🎉', name:'축제 곡',   desc:'다양한 소리가',  bpm:108, hint:'여러 악기를 풍성하게!'},
-      {id:'simple',  emoji:'🎶', name:'짧은 곡',   desc:'단순하고 명확한',bpm:96,  hint:'간단한 박자로.'},
+      {id:'lively',  emoji:'🎈', name:'신나는 곡', desc:'활기차고 빠른',  bpm:128, hint:'경쾌하게 두드려요!',
+        seed:['drum','tambourine','castanets','tambourine','drum','tambourine','castanets','tambourine']},
+      {id:'calm',    emoji:'🌙', name:'차분한 곡', desc:'조용하고 느린',  bpm:68,  hint:'천천히 부드럽게.',
+        seed:['triangle',null,null,null,'triangle',null,null,null]},
+      {id:'festive', emoji:'🎉', name:'축제 곡',   desc:'다양한 소리가',  bpm:108, hint:'여러 악기를 풍성하게!',
+        seed:['drum','tambourine','triangle','tambourine','drum','castanets','triangle','tambourine']},
+      {id:'simple',  emoji:'🎶', name:'짧은 곡',   desc:'단순하고 명확한',bpm:96,  hint:'간단한 박자로.',
+        seed:['drum',null,null,null,'drum',null,null,null]},
     ],
     preTitle:'주변에서 어떤 소리가 들리나요?',
     preExamples:['연필로 책상을 두드리면 똑똑 소리가 나요.','필통 지퍼에서 찌익 소리가 나요.','책장을 넘기면 사락사락 소리가 나요.','신발 벨크로에서 찍 소리가 나요.'],
@@ -496,10 +516,14 @@ const MODES = {
     cardBg:'rgba(255,255,255,0.92)',
     motto:'내 마음을 음악으로 노래해요',
     situations:[
-      {id:'happy',   emoji:'😊', name:'즐거운 기분', desc:'가볍고 밝은',         bpm:118, hint:'경쾌한 박자로!'},
-      {id:'sleepy',  emoji:'😴', name:'졸린 기분',   desc:'천천히 느린',         bpm:60,  hint:'느릿느릿 부드럽게.'},
-      {id:'excited', emoji:'🤩', name:'신나는 기분', desc:'빠르고 힘찬',         bpm:138, hint:'팡팡 빠르게!'},
-      {id:'calm',    emoji:'😌', name:'차분한 기분', desc:'평온하고 부드러운',   bpm:78,  hint:'고요히 정돈된 소리.'},
+      {id:'happy',   emoji:'😊', name:'즐거운 기분', desc:'가볍고 밝은',         bpm:118, hint:'경쾌한 박자로!',
+        seed:['castanets','tambourine','castanets','tambourine','castanets','tambourine','castanets','tambourine']},
+      {id:'sleepy',  emoji:'😴', name:'졸린 기분',   desc:'천천히 느린',         bpm:60,  hint:'느릿느릿 부드럽게.',
+        seed:['triangle',null,null,null,null,null,null,null]},
+      {id:'excited', emoji:'🤩', name:'신나는 기분', desc:'빠르고 힘찬',         bpm:138, hint:'팡팡 빠르게!',
+        seed:['drum','tambourine','drum','castanets','drum','tambourine','drum','castanets']},
+      {id:'calm',    emoji:'😌', name:'차분한 기분', desc:'평온하고 부드러운',   bpm:78,  hint:'고요히 정돈된 소리.',
+        seed:['triangle',null,null,null,'triangle',null,null,null]},
     ],
     preTitle:'오늘 내 기분은 어때요?',
     preExamples:['오늘은 친구랑 놀아서 즐거워요.','수업이 길어서 졸려요.','이번 주에 운동회가 있어서 신나요.','비 오는 날엔 차분해져요.'],
@@ -525,10 +549,14 @@ const MODES = {
     cardBg:'rgba(255,255,255,0.92)',
     motto:'무엇이든 자유롭게 그려요',
     situations:[
-      {id:'snail',  emoji:'🐌', name:'달팽이가 기어가요', desc:'아주 천천히',   bpm:62,  hint:'느릿느릿 천천히!'},
-      {id:'turtle', emoji:'🐢', name:'거북이가 걸어요',   desc:'느긋하게 걸으며',bpm:82,  hint:'느긋하게 또박또박!'},
-      {id:'rabbit', emoji:'🐰', name:'토끼가 뛰어요',     desc:'폴짝폴짝 뛰며', bpm:112, hint:'폴짝폴짝! 신나게!'},
-      {id:'cheetah',emoji:'🐆', name:'치타가 달려요',     desc:'쌩쌩 빠르게',   bpm:140, hint:'쌩쌩! 가장 빠르게!'},
+      {id:'snail',  emoji:'🐌', name:'달팽이가 기어가요', desc:'아주 천천히',   bpm:62,  hint:'느릿느릿 천천히!',
+        seed:['drum',null,null,null,null,null,null,null]},
+      {id:'turtle', emoji:'🐢', name:'거북이가 걸어요',   desc:'느긋하게 걸으며',bpm:82,  hint:'느긋하게 또박또박!',
+        seed:['drum',null,null,null,'drum',null,null,null]},
+      {id:'rabbit', emoji:'🐰', name:'토끼가 뛰어요',     desc:'폴짝폴짝 뛰며', bpm:112, hint:'폴짝폴짝! 신나게!',
+        seed:['castanets',null,'castanets',null,'castanets',null,'castanets',null]},
+      {id:'cheetah',emoji:'🐆', name:'치타가 달려요',     desc:'쌩쌩 빠르게',   bpm:140, hint:'쌩쌩! 가장 빠르게!',
+        seed:['drum','castanets','drum','castanets','drum','castanets','drum','castanets']},
     ],
     preTitle:'주변에서 어떤 소리가 들리나요?',
     preExamples:['교실에서 친구들 목소리가 들려요.','창밖에서 새가 지저귀어요.','시계가 째깍째깍 소리를 내요.','바람이 솔솔 부는 소리가 들려요.'],
@@ -1142,6 +1170,7 @@ function App(){
 
   // 모드/장면 바뀌면 분위기 이펙트 자동 조절
   // → 같은 작은 북도 우주에선 "쿵...우우웅~", 일상에선 "똑똑" 또렷하게
+  // ★ 1-2학년 노트북 스피커로도 들리도록 wet 값 과장
   useEffect(()=>{
     const fx = masterFx.current;
     if(!fx.reverb || !fx.delay) return;
@@ -1149,26 +1178,30 @@ function App(){
     let reverbWet = 0.2, delayWet = 0;
     if(mode?.id === 'new_world'){
       // 새로운 세상 — 공간감 큰 분위기
-      if(situation?.id === 'cave'){       // 신비한 동굴 — 깊은 메아리
-        reverbWet = 0.55; delayWet = 0.35;
+      if(situation?.id === 'cave'){       // 신비한 동굴 — 가장 깊은 메아리
+        reverbWet = 0.75; delayWet = 0.5;
       } else if(situation?.id === 'sea'){  // 심해 — 깊고 묵직한 울림
-        reverbWet = 0.6;  delayWet = 0.15;
+        reverbWet = 0.7;  delayWet = 0.3;
       } else if(situation?.id === 'space'){// 우주 — 광활한 잔향
-        reverbWet = 0.5;  delayWet = 0.2;
-      } else if(situation?.id === 'jungle'){// 정글 — 따뜻하고 가벼움
-        reverbWet = 0.18; delayWet = 0;
+        reverbWet = 0.65; delayWet = 0.45;
+      } else if(situation?.id === 'jungle'){// 정글 — 따뜻하고 가벼움 (메아리 거의 X)
+        reverbWet = 0.12; delayWet = 0;
       } else {
-        reverbWet = 0.4;  delayWet = 0.15;
+        reverbWet = 0.5;  delayWet = 0.2;
       }
     } else if(mode?.id === 'instrument_show'){
-      // 소리 발명가 — 일상 물건처럼 또렷
-      reverbWet = 0.08; delayWet = 0;
+      // 소리 발명가 — 일상 물건처럼 또렷, 메아리 거의 X
+      reverbWet = 0.04; delayWet = 0;
     } else if(mode?.id === 'mood'){
-      // 마음 시인 — 부드러운 감성
-      reverbWet = 0.3;  delayWet = 0.08;
+      // 마음 시인 — 부드러운 감성, 잔향 또렷
+      reverbWet = 0.45; delayWet = 0.15;
     } else if(mode?.id === 'free'){
-      // 자유 탐험 — 기본
-      reverbWet = 0.2;  delayWet = 0;
+      // 자유 탐험 — 기본 (장면 따라 살짝 변함)
+      if(situation?.id === 'snail' || situation?.id === 'turtle'){
+        reverbWet = 0.3; delayWet = 0.05;  // 느린 동물 — 살짝 울림
+      } else {
+        reverbWet = 0.15; delayWet = 0;     // 빠른 동물 — 또렷
+      }
     }
     // ramp으로 자연스럽게 전환
     try{
@@ -1260,6 +1293,18 @@ function App(){
     const cols = getTSInfo(ts||timeSig).cols;
     const ptn = Array(cols).fill(1);
     return playPreset(ptn,'drum',useBpm);
+  };
+
+  // 장면 선택 시 즉시 미리듣기 — 학생이 "아 이게 이 장면 느낌이구나" 체감
+  // situation.seed (8칸 패턴) × situation.bpm 으로 한 번 재생
+  const playSituationSample = async (sit)=>{
+    if(!sit?.seed) return;
+    await Tone.start();
+    const t0 = Tone.now() + 0.05;
+    const beat = 60 / sit.bpm / 2;  // 8칸 = 4박, 한 칸 = 반박
+    sit.seed.forEach((id,i)=>{
+      if(id) playOne(id, t0 + i*beat);
+    });
   };
 
   const playPair = async (a,b)=>{
@@ -1611,7 +1656,31 @@ function App(){
         </>
       )}
 
-      {view!=='login' && view!=='mode' && (
+      {/* 좌상단 모드 캐릭터 배지 — 모드 분위기 항상 visible (수료증/모둠 화면 제외) */}
+      {mode && view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && (
+        <div className="absolute top-6 left-6 z-50" style={{
+          display:'flex', alignItems:'center', gap:8,
+          padding:'6px 14px 6px 8px',
+          borderRadius:99,
+          background:'rgba(255,255,255,0.95)',
+          border:'3px solid '+mode.color,
+          boxShadow:'0 4px 14px rgba(0,0,0,0.15)',
+        }}>
+          <div style={{
+            width:38, height:38, borderRadius:'50%',
+            background:mode.color+'22',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:24,
+            border:'2px solid '+mode.color+'55',
+          }}>{mode.characterEmoji}</div>
+          <div style={{lineHeight:1.1}}>
+            <div style={{color:mode.color, fontSize:14, fontWeight:'bold'}}>{mode.character}</div>
+            <div style={{color:'#64748b', fontSize:11}}>{mode.label}</div>
+          </div>
+        </div>
+      )}
+
+      {view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && (
         <ProgressDots view={view} mode={mode}/>
       )}
 
@@ -1799,8 +1868,8 @@ function App(){
 
       {/* 사전 녹음 */}
       {view==='prerecord' && mode && (
-        <div className="h-full flex flex-col items-center justify-center gap-5 fade-in">
-          <div className="float text-6xl">🎵</div>
+        <div className="h-full flex flex-col items-center justify-center gap-4 fade-in pt-12">
+          <CharBubble mode={mode} text={`안녕! 나는 ${mode.character}야. 같이 ${mode.label.replace(/^[\u{1F300}-\u{1FAFF}]\s*/u,'')} 시작해볼까?`} big/>
           <RecorderUI title={mode.preTitle}
             examples={mode.preExamples}
             onComplete={async(r)=>{
@@ -1842,42 +1911,75 @@ function App(){
       {view==='situation' && mode && (
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in pt-12">
           <BackBtn/>
-          <CharBubble mode={mode} text="🎬 어떤 장면을 음악으로 만들어볼까?" big/>
+          <CharBubble mode={mode} text="🎬 장면을 한 번 눌러봐. 어떤 느낌인지 들려줄게!" big/>
           <div className="flex gap-4 justify-center flex-wrap">
             {mode.situations.map(s=>(
-              <button key={s.id} onClick={()=>{ setSituation(s); setBpm(s.bpm); trigger('drum'); }}
+              <button key={s.id}
+                onClick={()=>{ setSituation(s); setBpm(s.bpm); playSituationSample(s); }}
                 className={"card p-5 w-[260px] flex flex-col items-center gap-2 transition-transform "+
-                  (situation&&situation.id===s.id?'scale-105 ring-8 ring-amber-300':'hover:scale-105')}>
+                  (situation&&situation.id===s.id?'scale-105 ring-8 ring-amber-300':'hover:scale-105')}
+                style={{
+                  border: '3px solid '+mode.color+'66',
+                  background: 'linear-gradient(135deg, white, '+mode.color+'10)',
+                }}>
                 <div className="text-6xl">{s.emoji}</div>
-                <div className="t-big text-indigo-700 text-center" style={{lineHeight:1.1}}>{s.name}</div>
+                <div className="t-big text-center" style={{lineHeight:1.1, color:mode.color}}>{s.name}</div>
                 <div className="t-sm text-slate-500">{s.desc}</div>
+                <div className="t-xs font-bold mt-1" style={{color:mode.color, opacity:0.8}}>
+                  ▶ 누르면 들려줘!
+                </div>
               </button>
             ))}
           </div>
-          {situation && <div className="card px-7 py-3 t-mid text-indigo-600 fade-in">{situation.emoji} {situation.hint}</div>}
+          {situation && (
+            <div className="flex gap-3 items-center fade-in">
+              <div className="card px-6 py-3 t-mid" style={{color:mode.color}}>
+                🎵 {situation.emoji} <b>{situation.name}</b> 느낌이야! {situation.hint}
+              </div>
+              <button onClick={()=>playSituationSample(situation)}
+                className="btn bg-amber-300 text-amber-900 px-5 py-3 t-mid">
+                🔁 다시 듣기
+              </button>
+            </div>
+          )}
           <button className="btn bg-indigo-600 text-white t-big px-12 py-4 animate-pulse" disabled={!situation}
             onClick={()=>setView('tempo')}>{situation?'다음! →':'하나 골라봐'}</button>
         </div>
       )}
 
       {/* 빠르기 */}
-      {view==='tempo' && (
+      {view==='tempo' && (() => {
+        // 장면의 bpm으로 어느 카드가 가장 가까운지 자동 추천
+        const recId = situation ? (situation.bpm<=75?'slow':(situation.bpm>=120?'fast':'mid')) : null;
+        return (
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in pt-12">
           <BackBtn/>
-          <CharBubble mode={mode} text={`🐢🐰🐆 동물을 눌러서 빠르기를 들어봐!`} big/>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>"{situation?.name}" 에 어울리는 빠르기는?</p>
+          <CharBubble mode={mode}
+            text={situation ? `🐢🐰🐆 "${situation.name}"엔 어떤 빠르기가 어울릴까? 추천(💡)부터 들어봐!` : `🐢🐰🐆 동물을 눌러서 빠르기를 들어봐!`}
+            big/>
 
           <div className="flex gap-4">
-            {TEMPO_PRESETS.map(p=>(
-              <button key={p.id} onClick={()=>{ setBpm(p.bpm); playBeatPattern(p.bpm); }}
-                className={"card p-4 w-[200px] flex flex-col items-center gap-1 hover:scale-105 transition-transform "+
-                  (bpm===p.bpm?'ring-8 ring-amber-300':'')}>
-                <div className="text-6xl">{p.emoji}</div>
-                <div className="t-big text-indigo-700">{p.label}</div>
-                <div className="t-sm text-slate-500">{p.bpm} BPM</div>
-                <div className="t-sm text-emerald-600 mt-1 font-bold">▶ 눌러봐!</div>
-              </button>
-            ))}
+            {TEMPO_PRESETS.map(p=>{
+              const isRec = recId===p.id;
+              return (
+                <button key={p.id} onClick={()=>{ setBpm(p.bpm); playBeatPattern(p.bpm); }}
+                  className={"card p-4 w-[200px] flex flex-col items-center gap-1 hover:scale-105 transition-transform relative "+
+                    (bpm===p.bpm?'ring-8 ring-amber-300':'')}
+                  style={isRec ? {border:'4px solid '+(mode?.color||'#fbbf24')} : {}}>
+                  {isRec && (
+                    <div className="absolute -top-3 -right-3" style={{
+                      background:mode?.color||'#fbbf24', color:'white',
+                      fontSize:13, fontWeight:'bold', padding:'4px 10px', borderRadius:99,
+                      boxShadow:'0 2px 6px rgba(0,0,0,0.2)'
+                    }}>💡 추천</div>
+                  )}
+                  <div className="text-6xl">{p.emoji}</div>
+                  <div className="t-big text-indigo-700">{p.label}</div>
+                  <div className="t-sm text-slate-500">{p.bpm} BPM</div>
+                  <div className="t-sm text-emerald-600 mt-1 font-bold">▶ 눌러봐!</div>
+                </button>
+              );
+            })}
           </div>
           <div className="card p-3 w-[680px] flex flex-col items-center gap-2">
             <div className="flex items-center gap-4">
@@ -1897,7 +1999,8 @@ function App(){
             박자 모양 고르러 가기 →
           </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* 박자 모양 고르기 — 4박/3박 친근한 비교 */}
       {view==='beatPick' && (
@@ -1970,8 +2073,40 @@ function App(){
             ))}
           </div>
 
-          {/* 비트 그리드 */}
-          <div className="card mx-auto p-4 mb-3" style={{width:1130}}>
+          {/* 장면 힌트 — 학생이 막힐 때 도움 (자율 유지: 듣기는 자유, 가져오기는 명시적 선택) */}
+          {situation?.seed && stage===1 && (
+            <div className="flex justify-center gap-2 mb-2 fade-in">
+              <button onClick={()=>playSituationSample(situation)}
+                className="btn px-4 py-2 t-sm"
+                style={{background:'rgba(255,255,255,0.85)', color:mode.color, border:'2px solid '+mode.color+'66'}}>
+                🌱 {situation.emoji} {situation.name} 추천 박자 들어보기
+              </button>
+              <button onClick={()=>{
+                  // 명시적 "가져오기" — 학생이 누른 행위로만 첫 줄에 시드 패턴 채움
+                  // 비어 있는 그리드에만 동작 (학생이 만든 것 덮어쓰지 않음)
+                  const empty = grid[0].every(c=>!c);
+                  if(!empty){
+                    if(!confirm('내가 만든 박자가 있어요. 추천으로 바꿀까요?')) return;
+                  }
+                  setGrid(g=>g.map((row,r)=>{
+                    if(r===0) return situation.seed.slice(0, getTSInfo(timeSig).cols);
+                    return row;
+                  }));
+                  setFeedback('🌱 추천 박자를 가져왔어! 마음대로 바꿔도 돼.');
+                  setTimeout(()=>setFeedback(''), 3500);
+                }}
+                className="btn px-4 py-2 t-sm bg-amber-300 text-amber-900">
+                📋 그리드로 가져오기
+              </button>
+            </div>
+          )}
+
+          {/* 비트 그리드 — 빈 셀이 모드 색감으로 살짝 물들어 분위기 일관 */}
+          <div className="card mx-auto p-4 mb-3" style={{
+            width:1130,
+            border:'3px solid '+mode.color+'55',
+            background:'linear-gradient(135deg, '+mode.color+'08, '+mode.color+'14)',
+          }}>
             {(stage===3?[0,1,2]:[0]).map(r=>(
               <div key={r} className="flex justify-center gap-2 mb-2">
                 {Array.from({length:COLS}).map((_,c)=>{
@@ -1984,8 +2119,11 @@ function App(){
                       style={{
                         width: timeSig===3?160:128,
                         height:80,
-                        background:inst?inst.color:(isAccent?'rgba(255,255,255,0.85)':'rgba(255,255,255,0.5)'),
-                        borderColor: !inst && isAccent ? getTSInfo(timeSig).color+'aa' : undefined,
+                        // 빈 셀: 모드 색감 + accent는 진하게 (4박 강박/3박 강박)
+                        background: inst ? inst.color : (isAccent
+                          ? 'linear-gradient(135deg, '+mode.color+'30, '+mode.color+'45)'
+                          : 'linear-gradient(135deg, '+mode.color+'10, '+mode.color+'1a)'),
+                        borderColor: !inst && isAccent ? getTSInfo(timeSig).color+'aa' : (inst ? undefined : mode.color+'40'),
                         borderWidth: !inst && isAccent ? 5 : 4,
                       }}>
                       {inst && <InstIcon type={inst.id} size={50}/>}
@@ -2262,27 +2400,29 @@ function App(){
         const offset = circumference * (1 - stats.completionRate/100);
 
         return (
-          <div className="h-full flex flex-col items-center justify-center gap-3 fade-in">
-            {/* 격려 chip — 큼지막하게 */}
-            <div className={"cheer-chip "+cheerCls}>
-              <span style={{fontSize:38}}>{cheerEm}</span>
-              <span>{cheer}</span>
-            </div>
+          <div className="h-full flex flex-col items-center fade-in" style={{justifyContent:'center', gap:8}}>
 
-            {/* 수료증 본체 — 1-2학년용 넓고 시원한 카드 */}
-            <div className="card p-5 w-[1080px]" style={{border:'8px double '+mode.color, background:'rgba(255,255,255,0.97)'}}>
-              <div className="text-center">
-                <div className="text-6xl mb-1">{mode.characterEmoji}</div>
-                <div className="t-title" style={{color:mode.color, lineHeight:1, fontSize:42}}>{mode.character} 임명장</div>
-                <div className="t-sm text-slate-400 mt-1">🏆 {mode.label} · "{mode.motto}"</div>
-              </div>
-              <div className="my-3 text-center">
-                <div className="t-mid text-slate-500">탐험가</div>
-                <div className="t-huge mt-1" style={{color:mode.color, fontSize:36}}>{student?.name} 님</div>
+            {/* 수료증 본체 — 1-2학년용 넓고 시원한 카드 (cheer는 카드 안으로 통합) */}
+            <div className="card w-[1080px]" style={{padding:'14px 20px', border:'7px double '+mode.color, background:'rgba(255,255,255,0.97)'}}>
+
+              {/* 헤더 — 격려 chip을 카드 헤더 위에 인라인 */}
+              <div className="text-center" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2}}>
+                <div className={"cheer-chip-inline "+cheerCls}>
+                  <span style={{fontSize:22}}>{cheerEm}</span>
+                  <span>{cheer}</span>
+                </div>
+                <div style={{fontSize:36, lineHeight:1}}>{mode.characterEmoji}</div>
+                <div className="t-title" style={{color:mode.color, lineHeight:1, fontSize:28}}>{mode.character} 임명장</div>
+                <div className="t-sm text-slate-400" style={{fontSize:12}}>🏆 {mode.label} · "{mode.motto}"</div>
+                <div style={{marginTop:4}}>
+                  <span className="t-mid text-slate-500" style={{fontSize:14}}>탐험가 </span>
+                  <span style={{color:mode.color, fontSize:24, lineHeight:1, fontWeight:'bold'}}>{student?.name}</span>
+                  <span className="t-mid text-slate-500" style={{fontSize:14}}> 님</span>
+                </div>
               </div>
 
-              {/* KPI 4셀 — 곱셈 앱 패턴 가져옴 */}
-              <div className="grid grid-cols-4 gap-2 mb-3">
+              {/* KPI 4셀 — 더 컴팩트 */}
+              <div className="grid grid-cols-4 gap-2" style={{marginTop:10, marginBottom:8}}>
                 {/* 1. 활동 완성도 도넛 */}
                 <div className="kpi-cell">
                   <div className="kpi-label">🎯 활동 완성도</div>
@@ -2295,51 +2435,48 @@ function App(){
                         strokeDashoffset={offset}/>
                     </svg>
                     <div className="donut-label">
-                      <div className="donut-pct" style={{color:rateColor}}>{stats.completionRate}<span style={{fontSize:14}}>%</span></div>
+                      <div className="donut-pct" style={{color:rateColor}}>{stats.completionRate}<span style={{fontSize:12}}>%</span></div>
                       <div className="donut-frac">{stats.activities}/{stats.totalActivities}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. 진행 단계 — 이모지 도트로 한눈에 */}
+                {/* 2. 진행 단계 — 이모지 도트 */}
                 <div className="kpi-cell">
                   <div className="kpi-label">📈 활동 단계</div>
-                  <div className="kpi-big" style={{color:mode.color}}>{stats.stepsDone}<span style={{fontSize:18, color:'#94a3b8'}}>/{stats.steps.length}</span></div>
-                  <div className="flex gap-1 mt-1" style={{flexWrap:'wrap', justifyContent:'center', maxWidth:160}}>
+                  <div className="kpi-big" style={{color:mode.color, fontSize:26}}>{stats.stepsDone}<span style={{fontSize:14, color:'#94a3b8'}}>/{stats.steps.length}</span></div>
+                  <div className="flex gap-1" style={{flexWrap:'wrap', justifyContent:'center', maxWidth:150}}>
                     {stats.steps.map((s,i)=>(
                       <div key={i} title={s.label + (s.done?' ✓':' (아직)')}
                         style={{
-                          width:30, height:30, borderRadius:8,
+                          width:24, height:24, borderRadius:6,
                           background: s.done ? 'linear-gradient(135deg,#86efac,#34d399)' : '#f1f5f9',
                           border: s.done ? '2px solid #15803d' : '2px solid #cbd5e1',
-                          boxShadow: s.done ? '0 2px 5px rgba(52,211,153,0.35)' : 'none',
-                          fontSize:17, textAlign:'center',
+                          fontSize:13, textAlign:'center',
                           display:'flex', alignItems:'center', justifyContent:'center',
-                          opacity: s.done ? 1 : 0.4,
-                          transition:'all .15s'
+                          opacity: s.done ? 1 : 0.4
                         }}>
                         {s.emoji}
                       </div>
                     ))}
                   </div>
-                  <div className="kpi-small">{stats.steps.map(s=>s.label).join(' · ')}</div>
                 </div>
 
                 {/* 3. 학습 시간 */}
                 <div className="kpi-cell">
                   <div className="kpi-label">⏱️ 학습 시간</div>
-                  <div className="kpi-big" style={{color:mode.color}}>{stats.studyMin}<span style={{fontSize:18}}>분</span></div>
+                  <div className="kpi-big" style={{color:mode.color, fontSize:32}}>{stats.studyMin}<span style={{fontSize:16}}>분</span></div>
                   <div className="kpi-small">집중해서 활동했어요</div>
                 </div>
 
                 {/* 4. 칭찬 스티커 */}
                 <div className="kpi-cell">
                   <div className="kpi-label">⭐ 받은 별</div>
-                  <div className="flex gap-0 text-2xl">
+                  <div className="flex" style={{fontSize:22, gap:0}}>
                     {Array.from({length:session.selfScore||0}).map((_,i)=><span key={i}>⭐</span>)}
                   </div>
                   {(session.preSticker || session.postSticker) && (
-                    <div className="flex gap-1 text-xl">
+                    <div className="flex gap-1" style={{fontSize:18}}>
                       {session.preSticker && <span>{session.preSticker}</span>}
                       {session.postSticker && <span>{session.postSticker}</span>}
                     </div>
@@ -2349,14 +2486,14 @@ function App(){
               </div>
 
               {/* 내가 만든 박자 + 내가 정한 것 */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="rounded-2xl p-4" style={{background:mode.color+'15', border:'3px solid '+mode.color+'55'}}>
-                  <div className="t-sm text-slate-700 mb-2 font-bold" style={{fontSize:18}}>
+              <div className="grid grid-cols-2 gap-2" style={{marginBottom:6}}>
+                <div className="rounded-2xl" style={{padding:10, background:mode.color+'15', border:'2px solid '+mode.color+'55'}}>
+                  <div className="text-slate-700 font-bold" style={{fontSize:14, marginBottom:4}}>
                     🎵 내가 만든 박자 <span style={{color:getTSInfo(timeSig).color}}>({getTSInfo(timeSig).emoji} {getTSInfo(timeSig).label})</span>
                   </div>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col" style={{gap:3}}>
                     {grid.map((row,r)=>(
-                      <div key={r} className="flex justify-center gap-1.5">
+                      <div key={r} className="flex justify-center" style={{gap:3}}>
                         {row.map((c,i)=>{
                           const inst = c ? getInstObj(c) : null;
                           const isAccent = getTSInfo(timeSig).accent[i]===1;
@@ -2371,8 +2508,8 @@ function App(){
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl p-4 flex flex-col gap-1" style={{background:'rgba(254,243,199,0.65)', border:'3px solid #fbbf24'}}>
-                  <div className="text-slate-700 font-bold mb-1" style={{fontSize:18}}>🎯 내가 정한 것</div>
+                <div className="rounded-2xl flex flex-col" style={{padding:10, gap:3, background:'rgba(254,243,199,0.65)', border:'2px solid #fbbf24'}}>
+                  <div className="text-slate-700 font-bold" style={{fontSize:14, marginBottom:2}}>🎯 내가 정한 것</div>
                   {situation && <div className="info-line">🎬 장면: <b>{situation.name}</b></div>}
                   <div className="info-line">🐢 빠르기: <b>{bpm} BPM</b></div>
                   <div className="info-line">{getTSInfo(timeSig).emoji} 박자: <b>{getTSInfo(timeSig).label}</b></div>
@@ -2382,19 +2519,19 @@ function App(){
                 </div>
               </div>
 
-              {/* 인사이트 — 학생이 이뤄낸 목표 (등급 X, 활동 모습 O) */}
+              {/* 인사이트 — 학생이 이뤄낸 목표 */}
               {reflection.length>0 && (
-                <div className="rounded-2xl p-4 mb-2" style={{background:'linear-gradient(135deg,#ecfdf5,#d1fae5)', border:'3px solid #34d399'}}>
-                  <div className="text-emerald-900 mb-1 font-bold" style={{fontSize:18}}>🎯 오늘 우리가 이뤄낸 목표</div>
-                  <div className="flex flex-col gap-0.5">
+                <div className="rounded-2xl" style={{padding:10, background:'linear-gradient(135deg,#ecfdf5,#d1fae5)', border:'2px solid #34d399'}}>
+                  <div className="text-emerald-900 font-bold" style={{fontSize:14, marginBottom:3}}>🎯 오늘 우리가 이뤄낸 목표</div>
+                  <div className="flex flex-col" style={{gap:1}}>
                     {reflection.map((item,i)=>(
-                      <div key={i} className="text-emerald-800" style={{fontSize:16, lineHeight:1.5}}>✓ {item}</div>
+                      <div key={i} className="text-emerald-800" style={{fontSize:13, lineHeight:1.3}}>✓ {item}</div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="t-xs text-slate-400 text-center mt-2">{new Date().toLocaleDateString('ko-KR')} · {mode.certBody(situation)}</div>
+              <div className="text-slate-400 text-center" style={{fontSize:11, marginTop:6}}>{new Date().toLocaleDateString('ko-KR')} · {mode.certBody(situation)}</div>
             </div>
 
             <div className="flex gap-3 flex-wrap justify-center">
