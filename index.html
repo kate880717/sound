@@ -68,6 +68,59 @@ textarea,input[type=text]{font-family:'Jua',sans-serif;}
   background:rgba(255,255,255,0.85);padding:6px 16px;border-radius:999px;
   font-size:18px;color:#475569;z-index:40;}
 
+/* === 1-2학년 친화 안내 애니메이션 === */
+/* 빈 셀 첫 클릭 유도: 통통 펄스 */
+.pulse-empty{animation:pulseEmpty 1.4s ease-in-out infinite;}
+@keyframes pulseEmpty{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(251,191,36,0.6);}
+  50%{transform:scale(1.05);box-shadow:0 0 0 10px rgba(251,191,36,0);}
+}
+/* 화살표 바운스 — 안내 화살표가 통통 위아래 */
+.arrow-bounce{display:inline-block;animation:arrowBounce 1s ease-in-out infinite;}
+@keyframes arrowBounce{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-10px);}
+}
+/* 모달 등장 팝업 */
+.modal-pop{animation:modalPop .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalPop{
+  0%{opacity:0;transform:scale(.85);}
+  100%{opacity:1;transform:scale(1);}
+}
+/* 모드 인트로 — 큰 캐릭터 줌인 */
+.mode-zoom{animation:modeZoom 1.2s ease;}
+@keyframes modeZoom{
+  0%{opacity:0;transform:scale(.3) rotate(-10deg);}
+  60%{opacity:1;transform:scale(1.15) rotate(3deg);}
+  100%{opacity:1;transform:scale(1) rotate(0);}
+}
+/* 모드 카드 hover */
+.mode-card-hover{transition:transform .25s ease, box-shadow .25s ease;}
+.mode-card-hover:hover{transform:scale(1.06) translateY(-4px);}
+/* 안내 박스 — 그리드 바로 아래 큰 텍스트 안내 */
+.tutorial-tip{
+  background:linear-gradient(135deg, #fef3c7, #fde68a);
+  border:3px solid #f59e0b;
+  border-radius:99px;
+  padding:8px 22px;
+  font-family:'Jua',sans-serif;
+  font-size:20px;
+  color:#78350f;
+  box-shadow:0 4px 14px rgba(245,158,11,0.25);
+  display:inline-flex;align-items:center;gap:10px;
+  animation:tipGlow 2s ease-in-out infinite;
+}
+@keyframes tipGlow{
+  0%,100%{box-shadow:0 4px 14px rgba(245,158,11,0.25);}
+  50%{box-shadow:0 4px 24px rgba(245,158,11,0.55);}
+}
+/* 가독성: 배경에 직접 텍스트 쓸 때 outline 효과 (대안용, 사용 자제) */
+.readable-light{
+  background:rgba(255,255,255,0.92); color:#475569;
+  padding:5px 16px; border-radius:99px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
 /* 박자 카드 — 크고 친근하게 (학생이 한눈에 보고 고를 수 있게) */
 .beat-pick-card{
   border-radius:32px;
@@ -377,6 +430,33 @@ const INSTRUMENTS = [
   {id:'tambourine',name:'탬버린',     color:'#f472b6', timbre:'찰랑찰랑 흔드는 소리'},
   {id:'castanets',name:'캐스터네츠',  color:'#f87171', timbre:'딱딱 짧은 소리'},
 ];
+
+/* ===== 예시 사운드 라이브러리 — 녹음 안 될 때 대체 ===== */
+/* 마이크 권한 거부/학교 컴퓨터 마이크 없음/조용한 환경 어려움 등 */
+/* 학생이 "📚 예시 사운드 고르기" 버튼으로 my1/my2 슬롯에 즉시 넣을 수 있음 */
+/* play(synth,time) — synth는 useEffect에서 미리 등록된 Tone.js 합성기 */
+const SAMPLE_SOUNDS = [
+  {id:'clap',    name:'박수',        emoji:'👏', desc:'짝짝짝!',
+    play:(s,t)=>s.triggerAttackRelease('16n', t)},
+  {id:'stomp',   name:'발 구르기',    emoji:'👣', desc:'쿵쿵쿵!',
+    play:(s,t)=>s.triggerAttackRelease('C1','8n', t, 0.9)},
+  {id:'table',   name:'책상 톡톡',    emoji:'✏️', desc:'톡톡톡!',
+    play:(s,t)=>s.triggerAttackRelease('C4','16n', t, 0.7)},
+  {id:'snap',    name:'손가락 딱',    emoji:'🤏', desc:'딱딱!',
+    play:(s,t)=>s.triggerAttackRelease('32n', t)},
+  {id:'paper',   name:'종이 사락',    emoji:'📜', desc:'사락사락',
+    play:(s,t)=>s.triggerAttackRelease('8n', t)},
+  {id:'knock',   name:'문 두드리기',  emoji:'🚪', desc:'똑똑똑',
+    play:(s,t)=>s.triggerAttackRelease('C3','16n', t, 0.8)},
+  {id:'whistle', name:'휘파람',      emoji:'😗', desc:'휘이~',
+    play:(s,t)=>s.triggerAttackRelease('A5','4n', t)},
+  {id:'water',   name:'물방울',      emoji:'💧', desc:'똑똑',
+    play:(s,t)=>s.triggerAttackRelease('C6','16n', t, 0.9)},
+  {id:'bang',    name:'쾅',          emoji:'💥', desc:'쾅!',
+    play:(s,t)=>s.triggerAttackRelease('A0','4n', t, 1.0)},
+  {id:'zipper',  name:'지퍼',        emoji:'🎒', desc:'지이익',
+    play:(s,t)=>s.triggerAttackRelease('4n', t)},
+];
 const CUSTOM_COLORS = {my1:'#a78bfa', my2:'#2dd4bf'};
 const CUSTOM_DEFAULT_NAMES = {my1:'내 소리 1', my2:'내 소리 2'};
 const CUSTOM_TIMBRE = '내가 녹음한 소리';
@@ -449,6 +529,8 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#1e1b4b 0%,#3730a3 25%,#6366f1 55%,#93c5fd 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'광활한 우주를 음악으로 그려요',
+    // 모드 카드 누르면 들려주는 4박 맛보기 — 메아리 큰 트라이앵글
+    previewSample:['triangle',null,'triangle',null,'triangle',null,'triangle',null],
     situations:[
       {id:'sea',    emoji:'🌊', name:'심해 동굴',     desc:'깊은 바다 속', bpm:58, hint:'천천히 떨리는 깊은 소리',
         seed:['drum',null,null,null,'drum',null,'triangle',null]},
@@ -482,6 +564,8 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#7c2d12 0%,#c2410c 25%,#f97316 55%,#fed7aa 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'주변 물건이 악기가 되는 마법',
+    // 일상 물건 소리 — 책상 톡톡 + 박수 또렷 (메아리 거의 X)
+    previewSample:['table','clap','table','clap','table','clap','table','clap'],
     situations:[
       {id:'lively',  emoji:'🎈', name:'신나는 곡', desc:'활기차고 빠른',  bpm:128, hint:'경쾌하게 두드려요!',
         seed:['drum','tambourine','castanets','tambourine','drum','tambourine','castanets','tambourine']},
@@ -515,6 +599,8 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#581c87 0%,#a855f7 30%,#e879f9 60%,#fbcfe8 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'내 마음을 음악으로 노래해요',
+    // 마음 — 트라이앵글 부드럽게 + 살짝 메아리
+    previewSample:['triangle',null,null,null,'triangle',null,null,null],
     situations:[
       {id:'happy',   emoji:'😊', name:'즐거운 기분', desc:'가볍고 밝은',         bpm:118, hint:'경쾌한 박자로!',
         seed:['castanets','tambourine','castanets','tambourine','castanets','tambourine','castanets','tambourine']},
@@ -548,6 +634,8 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#064e3b 0%,#10b981 30%,#34d399 60%,#a7f3d0 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'무엇이든 자유롭게 그려요',
+    // 자유 — 캐스터네츠 가득 (자유로움 + 빠름)
+    previewSample:['castanets',null,'castanets',null,'castanets',null,'castanets',null],
     situations:[
       {id:'snail',  emoji:'🐌', name:'달팽이가 기어가요', desc:'아주 천천히',   bpm:62,  hint:'느릿느릿 천천히!',
         seed:['drum',null,null,null,null,null,null,null]},
@@ -576,8 +664,16 @@ const MODES = {
   },
 };
 
-function InstIcon({type,size=60}){
+function InstIcon({type,size=60,emoji=null}){
   const s={width:size,height:size};
+  // 예시 사운드 슬롯 — emoji 우선 표시
+  if(emoji) return (
+    <div style={{
+      width:size, height:size,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize:size*0.75, lineHeight:1,
+    }}>{emoji}</div>
+  );
   if(type==='drum') return (
     <svg viewBox="0 0 100 100" style={s}>
       <line x1="22" y1="8" x2="40" y2="26" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round"/>
@@ -773,6 +869,15 @@ function RecorderUI({title, examples, onComplete}){
   );
 }
 
+/* 모드 인트로 자동 진행 — 2초 후 onDone 호출 */
+function ModeIntroAutoAdvance({onDone}){
+  useEffect(()=>{
+    const t = setTimeout(onDone, 2400);
+    return ()=>clearTimeout(t);
+  },[]);
+  return null;
+}
+
 function CharBubble({mode, text, big=false}){
   if(!mode) return null;
   return (
@@ -802,7 +907,7 @@ function CharBubble({mode, text, big=false}){
    3차시 운영 권장: 1차시 = 도입+소리, 2차시 = 음악 만들기 (핵심), 3차시 = 정리+발표
    각 차시 약 40분 기준 */
 const BIG_STEPS = [
-  {key:'start',  label:'시작',     cha:1, views:['login','mode']},
+  {key:'start',  label:'시작',     cha:1, views:['login','mode','modeIntro']},
   {key:'sound',  label:'소리 모으기', cha:1, views:['prerecord','mySounds']},
   {key:'make',   label:'음악 만들기', cha:2, views:['situation','tempo','beatPick','stage','rule','preference','pair']},
   {key:'reflect',label:'마음 정리',   cha:3, views:['reflection','postrecord','eval']},
@@ -918,10 +1023,12 @@ function BeatPickCard({ts, selected, isPlaying, onSelect, onListen, onPlayBeat})
   );
 }
 
-function CustomSoundSlot({slot, info, previewed, onRecorded, onClear, onPreview, onRename}){
+function CustomSoundSlot({slot, info, previewed, onRecorded, onClear, onPreview, onRename, onOpenSamples}){
   const [recording,setRecording]=useState(false);
   const [timer,setTimer]=useState(0);
   const mr=useRef(null), chunks=useRef([]), tick=useRef(null), stream=useRef(null);
+  const isSample = info?.sampleId;  // 예시 사운드 슬롯인지
+  const hasContent = info && (info.url || info.sampleId);
   const start = async ()=>{
     try{
       const st = await navigator.mediaDevices.getUserMedia({audio:true});
@@ -940,18 +1047,27 @@ function CustomSoundSlot({slot, info, previewed, onRecorded, onClear, onPreview,
         if(t>=1){ if(mr.current && mr.current.state==='recording') mr.current.stop(); return t; }
         return t+1;
       }),1000);
-    }catch(e){ alert('마이크를 사용할 수 없어요. 건너뛰어도 괜찮아요.'); }
+    }catch(e){ alert('마이크가 안 켜졌어! 아래 "📚 예시 사운드 고르기" 를 눌러봐.'); }
   };
   const stop = ()=>{ if(mr.current && mr.current.state==='recording') mr.current.stop(); };
   return (
     <div className="card p-5 w-[320px] flex flex-col items-center gap-3">
-      <InstIcon type={slot} size={64}/>
+      <InstIcon type={slot} size={64} emoji={info?.emoji}/>
       <input type="text" value={info?.name || CUSTOM_DEFAULT_NAMES[slot]}
         onChange={e=>onRename(slot, e.target.value)}
         placeholder={CUSTOM_DEFAULT_NAMES[slot]}
-        className="w-full t-mid text-center rounded-2xl bg-white/70 border-2 border-indigo-200 px-3 py-2 outline-none focus:border-indigo-400"/>
-      {!info && !recording && (
-        <button onClick={start} className="btn bg-indigo-500 text-white px-7 py-3 t-mid">🎤 녹음 시작</button>
+        className="w-full t-mid text-center rounded-2xl bg-white border-2 border-indigo-200 px-3 py-2 outline-none focus:border-indigo-400"
+        style={{color:'#1e293b'}}/>
+      {!hasContent && !recording && (
+        <div className="flex flex-col gap-2 w-full">
+          <button onClick={start} className="btn bg-indigo-500 text-white px-5 py-3 t-mid">
+            🎤 직접 녹음하기
+          </button>
+          <div className="t-xs text-slate-400 text-center" style={{margin:'2px 0'}}>또는</div>
+          <button onClick={()=>onOpenSamples(slot)} className="btn bg-amber-300 text-amber-900 px-5 py-2 t-sm">
+            📚 예시 사운드 고르기
+          </button>
+        </div>
       )}
       {recording && (
         <>
@@ -959,11 +1075,16 @@ function CustomSoundSlot({slot, info, previewed, onRecorded, onClear, onPreview,
           <button onClick={stop} className="btn bg-rose-500 text-white px-6 py-2 t-mid">⏹ 끝</button>
         </>
       )}
-      {info && !recording && (
+      {hasContent && !recording && (
         <>
           {info.silent && (
             <div className="bg-rose-100 text-rose-700 px-3 py-2 rounded-xl t-sm text-center w-full" style={{lineHeight:1.3}}>
-              ⚠️ 소리가 안 들렸어요!<br/>🔁 다시 녹음해요
+              ⚠️ 소리가 안 들렸어요!<br/>🔁 다시 녹음하거나 📚 예시 골라봐요
+            </div>
+          )}
+          {isSample && (
+            <div className="bg-amber-50 text-amber-800 px-3 py-1 rounded-full t-xs text-center" style={{border:'1px solid #fbbf24'}}>
+              📚 예시 사운드 사용 중
             </div>
           )}
           <div className="flex gap-2">
@@ -975,8 +1096,10 @@ function CustomSoundSlot({slot, info, previewed, onRecorded, onClear, onPreview,
           </div>
         </>
       )}
-      {!info && !recording && (
-        <div className="t-sm text-slate-400 text-center">짧은 소리 한 번만!<br/>(박수 · '탁' · 책상 톡)</div>
+      {!hasContent && !recording && (
+        <div className="t-xs text-slate-400 text-center" style={{lineHeight:1.3}}>
+          짧은 소리 한 번만!<br/>(박수 · '탁' · 책상 톡)
+        </div>
       )}
     </div>
   );
@@ -1073,7 +1196,13 @@ function App(){
   const [showSettings,setShowSettings]=useState(false);
   const [resuming,setResuming]=useState(false);            // 복원 직후엔 자동저장 잠깐 끔
 
+  // 예시 사운드 모달 — 녹음 안 될 때 대체 (박수/발구르기 등 10종)
+  const [sampleModal,setSampleModal]=useState(null);       // null | 'my1' | 'my2'
+  const [selectedSample,setSelectedSample]=useState(null); // 모달에서 미리 선택한 sample
+
   const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), recorder=useRef(null);
+  const sampleSynths=useRef({}); // 예시 사운드 합성기 (박수·발구르기·책상 등)
+  const customSoundsRef=useRef({my1:null,my2:null}); // playOne/trigger에서 최신 sample 참조용
   const players=useRef({my1:null,my2:null});
   const loopCount=useRef(0), lastCol=useRef(-1);
   // 모드/장면별 분위기 이펙트 — 우주는 광활, 동굴은 깊은 메아리, 일상은 또렷
@@ -1093,6 +1222,7 @@ function App(){
 
   useEffect(()=>{ speakerRef.current=speakerOn; },[speakerOn]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
+  useEffect(()=>{ customSoundsRef.current = customSounds; },[customSounds]);
   useEffect(()=>{ Tone.Transport.bpm.value=bpm; },[bpm]);
 
   // 핵심 진행 상태 자동 저장 (localStorage) — 같은 브라우저로 이어할 때 복원 가능
@@ -1117,6 +1247,11 @@ function App(){
       customSoundNames: {
         my1: customSounds.my1?.name || null,
         my2: customSounds.my2?.name || null,
+      },
+      // 예시 사운드(sampleId)는 url 없이도 복원 가능
+      customSoundSamples: {
+        my1: customSounds.my1?.sampleId ? {sampleId: customSounds.my1.sampleId, emoji: customSounds.my1.emoji} : null,
+        my2: customSounds.my2?.sampleId ? {sampleId: customSounds.my2.sampleId, emoji: customSounds.my2.emoji} : null,
       },
       beatHeard,
       savedAt: Date.now(),
@@ -1159,11 +1294,38 @@ function App(){
     synths.current.drum.volume.value = 3;
     synths.current.castanets.volume.value = 2;
 
+    // ▼ 예시 사운드 합성기 — 학생 녹음 안 될 때 대체용
+    //   모드 이펙트 체인을 똑같이 통과 → 우주에선 박수도 메아리 / 일상에선 깨끗
+    sampleSynths.current = {
+      clap:    new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.001,decay:0.18,sustain:0,release:0.05}}).connect(delay),
+      stomp:   new Tone.MembraneSynth({pitchDecay:0.1,octaves:8,envelope:{attack:0.001,decay:0.4,sustain:0.01,release:0.2}}).connect(delay),
+      table:   new Tone.MembraneSynth({pitchDecay:0.005,octaves:2,envelope:{attack:0.001,decay:0.08,sustain:0,release:0.05}}).connect(delay),
+      snap:    new Tone.MetalSynth({frequency:500,envelope:{attack:0.001,decay:0.1,release:0.05},harmonicity:6.5,modulationIndex:40,resonance:8000,octaves:1}).connect(delay),
+      paper:   new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.04,decay:0.25,sustain:0,release:0.1}}).connect(delay),
+      knock:   new Tone.MembraneSynth({pitchDecay:0.02,octaves:3,envelope:{attack:0.001,decay:0.12,sustain:0,release:0.08}}).connect(delay),
+      whistle: new Tone.FMSynth({harmonicity:1,modulationIndex:1,oscillator:{type:'sine'},envelope:{attack:0.04,decay:0.2,sustain:0.4,release:0.15}}).connect(delay),
+      water:   new Tone.FMSynth({harmonicity:3,modulationIndex:10,oscillator:{type:'sine'},envelope:{attack:0.001,decay:0.18,sustain:0,release:0.1}}).connect(delay),
+      bang:    new Tone.MembraneSynth({pitchDecay:0.15,octaves:10,envelope:{attack:0.001,decay:0.5,sustain:0.05,release:0.25}}).connect(delay),
+      zipper:  new Tone.NoiseSynth({noise:{type:'brown'}, envelope:{attack:0.05,decay:0.35,sustain:0.2,release:0.1}}).connect(delay),
+    };
+    // 볼륨 균형
+    sampleSynths.current.clap.volume.value = -3;
+    sampleSynths.current.stomp.volume.value = 5;
+    sampleSynths.current.table.volume.value = 2;
+    sampleSynths.current.snap.volume.value = -2;
+    sampleSynths.current.paper.volume.value = -8;
+    sampleSynths.current.knock.volume.value = 2;
+    sampleSynths.current.whistle.volume.value = -5;
+    sampleSynths.current.water.volume.value = -2;
+    sampleSynths.current.bang.volume.value = 4;
+    sampleSynths.current.zipper.volume.value = -10;
+
     recorder.current=new Tone.Recorder();
     Tone.getDestination().connect(recorder.current);
 
     return ()=>{
       Object.values(synths.current).forEach(s=>s&&s.dispose());
+      Object.values(sampleSynths.current).forEach(s=>s&&s.dispose());
       Object.values(players.current).forEach(p=>p&&p.dispose());
       if(masterFx.current.reverb){ try{masterFx.current.reverb.dispose();}catch(e){} }
       if(masterFx.current.delay){ try{masterFx.current.delay.dispose();}catch(e){} }
@@ -1254,6 +1416,15 @@ function App(){
 
   const playOne = (id, time)=>{
     if(id==='my1'||id==='my2'){
+      // 합성 예시 사운드 (sampleId가 있으면 합성)
+      const cs = customSoundsRef.current?.[id];
+      if(cs?.sampleId){
+        const synth = sampleSynths.current[cs.sampleId];
+        const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
+        if(synth && def){ try{ def.play(synth, time); }catch(e){} }
+        return;
+      }
+      // 녹음 sample (Player)
       const p = players.current[id];
       if(p && p.loaded){
         try{ p.start(time); }catch(e){}
@@ -1272,6 +1443,13 @@ function App(){
   const trigger=async(id)=>{
     await Tone.start();
     if(id==='my1'||id==='my2'){
+      const cs = customSoundsRef.current?.[id];
+      if(cs?.sampleId){
+        const synth = sampleSynths.current[cs.sampleId];
+        const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
+        if(synth && def){ try{ def.play(synth, Tone.now()+0.02); }catch(e){} }
+        return;
+      }
       const p = players.current[id];
       if(p && p.loaded){
         try{ p.start(); }catch(e){}
@@ -1327,6 +1505,48 @@ function App(){
     });
   };
 
+  // 예시 사운드 단일 재생 (모달에서 들어볼 때)
+  const playSampleSound = async (sampleId)=>{
+    await Tone.start();
+    const synth = sampleSynths.current[sampleId];
+    const def = SAMPLE_SOUNDS.find(s=>s.id===sampleId);
+    if(synth && def){
+      try{ def.play(synth, Tone.now()+0.02); }catch(e){}
+    }
+  };
+
+  // 모드 맛보기 — 모드 카드 누르면 4박 짧은 패턴 들려줌
+  // (모드 이펙트 useEffect가 reverb wet 적용 후라 약간 delay)
+  const playModeSample = async (m)=>{
+    if(!m?.previewSample) return;
+    await Tone.start();
+    const t0 = Tone.now()+0.05;
+    const beat = 60/100/2; // bpm 100 기준
+    m.previewSample.forEach((id,i)=>{
+      if(!id) return;
+      const time = t0 + i*beat;
+      // 일반 악기
+      if(synths.current[id]){
+        const sy = synths.current[id];
+        try{
+          if(id==='triangle') sy.triggerAttackRelease('C8','16n',time);
+          else if(id==='tambourine') sy.triggerAttackRelease('16n',time);
+          else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time);
+          else sy.triggerAttackRelease('C2','8n',time);
+        }catch(e){}
+        return;
+      }
+      // 합성 sample (clap, table 등)
+      if(sampleSynths.current[id]){
+        const def = SAMPLE_SOUNDS.find(s=>s.id===id);
+        if(def){ try{ def.play(sampleSynths.current[id], time); }catch(e){} }
+      }
+    });
+  };
+
+  // customSounds 슬롯이 채워졌는지 — 녹음(url)도, 예시(sampleId)도 모두 true
+  const hasSnd = (cs)=>!!(cs && (cs.url || cs.sampleId));
+
   const playPair = async (a,b)=>{
     if(!a||!b) return;
     await Tone.start();
@@ -1370,8 +1590,16 @@ function App(){
   };
   const onPreviewSound = async (slot)=>{
     await Tone.start();
-    const p = players.current[slot];
-    if(p && p.loaded){ try{ p.stop(); p.start(); }catch(e){} }
+    const cs = customSounds[slot];
+    if(cs?.sampleId){
+      // 합성 예시 사운드
+      const synth = sampleSynths.current[cs.sampleId];
+      const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
+      if(synth && def){ try{ def.play(synth, Tone.now()+0.02); }catch(e){} }
+    } else {
+      const p = players.current[slot];
+      if(p && p.loaded){ try{ p.stop(); p.start(); }catch(e){} }
+    }
     setPreviewed(prev=>({...prev, [slot]:true}));
   };
   const onRenameSound = (slot, name)=>{
@@ -1379,7 +1607,10 @@ function App(){
   };
 
   const getInstObj = (id)=>{
-    if(id==='my1'||id==='my2') return {id, name:customSounds[id]?.name||CUSTOM_DEFAULT_NAMES[id], color:CUSTOM_COLORS[id], timbre:CUSTOM_TIMBRE, custom:true};
+    if(id==='my1'||id==='my2'){
+      const cs = customSounds[id];
+      return {id, name: cs?.name||CUSTOM_DEFAULT_NAMES[id], color:CUSTOM_COLORS[id], timbre:CUSTOM_TIMBRE, custom:true, emoji: cs?.emoji||null};
+    }
     return INSTRUMENTS.find(i=>i.id===id);
   };
 
@@ -1387,8 +1618,8 @@ function App(){
     if(forStage===1) return [INSTRUMENTS[0]];
     if(forStage===2) return INSTRUMENTS;
     const customs = [];
-    if(customSounds.my1?.url) customs.push(getInstObj('my1'));
-    if(customSounds.my2?.url) customs.push(getInstObj('my2'));
+    if(hasSnd(customSounds.my1)) customs.push(getInstObj('my1'));
+    if(hasSnd(customSounds.my2)) customs.push(getInstObj('my2'));
     if(favorites.length===0) return [...INSTRUMENTS, ...customs];
     const chosen = favorites.map(id=>INSTRUMENTS.find(i=>i.id===id)).filter(Boolean);
     return [...chosen, ...customs];
@@ -1524,6 +1755,8 @@ function App(){
   const goBack = ()=>{
     stopAll();
     if(view==='mode') setView('login');
+    else if(view==='modeIntro') setView('mode');
+    else if(view==='prerecord') setView('mode');
     else if(view==='mySounds') setView('prerecord');
     else if(view==='situation') setView('mySounds');
     else if(view==='tempo') setView('situation');
@@ -1565,8 +1798,8 @@ function App(){
     try{
       const instLookup = {};
       INSTRUMENTS.forEach(i=>{ instLookup[i.id]=i; });
-      if(customSounds.my1?.url) instLookup.my1 = getInstObj('my1');
-      if(customSounds.my2?.url) instLookup.my2 = getInstObj('my2');
+      if(hasSnd(customSounds.my1)) instLookup.my1 = getInstObj('my1');
+      if(hasSnd(customSounds.my2)) instLookup.my2 = getInstObj('my2');
       const dataUrl = gridToImage(grid, instLookup);
       const b64 = dataUrl.split(',')[1];
       const imgRes = await api.saveRecording({
@@ -1605,7 +1838,7 @@ function App(){
         favoriteWhy? '좋아한 이유: '+favoriteWhy : '',
         (pairA&&pairB)? '어울리는 짝꿍: '+getInstObj(pairA).name+' + '+getInstObj(pairB).name+' (시도 '+pairTried.length+'번)' : '',
         '빠르기: '+bpm+' BPM',
-        (customSounds.my1?.url||customSounds.my2?.url)? '내 소리: '+[customSounds.my1?.name, customSounds.my2?.name].filter(Boolean).join(', ') : '',
+        (hasSnd(customSounds.my1)||hasSnd(customSounds.my2))? '내 소리: '+[customSounds.my1?.name, customSounds.my2?.name].filter(Boolean).join(', ') : '',
         musicTakes.length>1? '두 번 녹음(Before/After)' : '',
       ].filter(Boolean).join(' / '),
       postRecordText: session.postRecordText||'', postRecordUrl: session.postRecordUrl||'',
@@ -1633,7 +1866,7 @@ function App(){
     let activities = 0;       // 학생이 한 활동 수
     let totalActivities = 7;  // 만점 활동 수
     if(session.preRecordText || session.preRecordUrl) activities++;
-    if(customSounds.my1?.url || customSounds.my2?.url) activities++;
+    if(hasSnd(customSounds.my1) || hasSnd(customSounds.my2)) activities++;
     if(situation) activities++;
     if(chosenRule) activities++;
     if(favorites.length>0) activities++;
@@ -1644,7 +1877,7 @@ function App(){
     // 단계 도트 6개 (큰 흐름) — 이모지로 한눈에
     const steps = [
       {label:'시작', emoji:'🚀', done: !!mode},
-      {label:'소리', emoji:'🎤', done: !!(session.preRecordText || session.preRecordUrl || customSounds.my1?.url || customSounds.my2?.url)},
+      {label:'소리', emoji:'🎤', done: !!(session.preRecordText || session.preRecordUrl || hasSnd(customSounds.my1) || hasSnd(customSounds.my2))},
       {label:'장면', emoji:'🎬', done: !!situation},
       {label:'박자', emoji:'🥁', done: !!chosenRule},
       {label:'음악', emoji:'🎵', done: musicTakes.length>0},
@@ -1680,7 +1913,7 @@ function App(){
       )}
 
       {/* 좌상단 모드 캐릭터 배지 — 모드 분위기 항상 visible (수료증/모둠 화면 제외) */}
-      {mode && view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && (
+      {mode && view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && view!=='modeIntro' && (
         <div className="absolute top-6 left-6 z-50" style={{
           display:'flex', alignItems:'center', gap:6,
           padding:'4px 10px 4px 4px',
@@ -1704,7 +1937,7 @@ function App(){
         </div>
       )}
 
-      {view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && (
+      {view!=='login' && view!=='mode' && view!=='cert' && view!=='groupShow' && view!=='modeIntro' && (
         <ProgressDots view={view} mode={mode}/>
       )}
 
@@ -1795,12 +2028,25 @@ function App(){
                   if(s.reflection) setReflection(s.reflection);
                   if(s.session) setSession(s.session);
                   if(s.beatHeard) setBeatHeard(s.beatHeard);
-                  if(s.customSoundNames){
-                    setCustomSounds({
-                      my1: s.customSoundNames.my1 ? {name: s.customSoundNames.my1, url: null} : null,
-                      my2: s.customSoundNames.my2 ? {name: s.customSoundNames.my2, url: null} : null,
-                    });
-                  }
+                  // 예시 사운드는 그대로 복원 가능 (url 없음, sampleId만)
+                  // 녹음 sound는 blob 휘발이라 이름만 복원
+                  const restoreSlot = (slot)=>{
+                    const sample = s.customSoundSamples?.[slot];
+                    if(sample?.sampleId){
+                      return {type:'sample', sampleId:sample.sampleId, emoji:sample.emoji,
+                              name: s.customSoundNames?.[slot] || SAMPLE_SOUNDS.find(x=>x.id===sample.sampleId)?.name || '내 소리'};
+                    }
+                    if(s.customSoundNames?.[slot]){
+                      return {name: s.customSoundNames[slot], url: null};
+                    }
+                    return null;
+                  };
+                  setCustomSounds({my1: restoreSlot('my1'), my2: restoreSlot('my2')});
+                  // sample은 이미 들었던 거니 previewed 자동 true, 녹음은 다시 들어야 함
+                  setPreviewed({
+                    my1: !!s.customSoundSamples?.my1?.sampleId,
+                    my2: !!s.customSoundSamples?.my2?.sampleId,
+                  });
                   const safeView = (s.view==='cert' || s.view==='groupShow') ? 'mode' : s.view;
                   setView(safeView);
                   setShowResumeDialog(false);
@@ -1848,51 +2094,160 @@ function App(){
         </div>
       )}
 
+      {/* 예시 사운드 모달 — 마이크 안 되거나 조용한 환경 대체 */}
+      {sampleModal && (
+        <div className="modal-bg" onClick={()=>{setSampleModal(null); setSelectedSample(null);}}>
+          <div className="card p-6 w-[880px]" onClick={e=>e.stopPropagation()}
+            style={{maxHeight:'92vh', overflowY:'auto'}}>
+            <div className="text-center mb-3">
+              <div className="t-huge text-indigo-700">📚 예시 사운드 골라봐!</div>
+              <div className="t-sm text-slate-500" style={{marginTop:4}}>
+                녹음이 어려울 때 사용할 수 있는 소리야 · 카드를 누르면 들려줘
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-3" style={{marginBottom:14}}>
+              {SAMPLE_SOUNDS.map(s=>{
+                const isSel = selectedSample?.id===s.id;
+                return (
+                  <button key={s.id}
+                    onClick={()=>{ setSelectedSample(s); playSampleSound(s.id); }}
+                    className={"card p-3 flex flex-col items-center gap-1 transition-transform hover:scale-105 "+
+                      (isSel?'scale-105':'')}
+                    style={{
+                      border: isSel ? '4px solid #f59e0b' : '3px solid #e2e8f0',
+                      background: isSel ? 'linear-gradient(135deg,#fef3c7,#fde68a)' : 'white',
+                      cursor:'pointer',
+                    }}>
+                    <div style={{fontSize:42, lineHeight:1}}>{s.emoji}</div>
+                    <div className="t-mid" style={{color:'#1e293b', fontWeight:'bold'}}>{s.name}</div>
+                    <div className="t-xs text-slate-500">{s.desc}</div>
+                    <div className="t-xs font-bold" style={{color: isSel?'#92400e':'#10b981'}}>
+                      {isSel ? '✓ 선택됨' : '▶ 누르면 들려줘'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 justify-center">
+              <button onClick={()=>{setSampleModal(null); setSelectedSample(null);}}
+                className="btn bg-slate-200 text-slate-700 px-6 py-3 t-mid">취소</button>
+              <button disabled={!selectedSample}
+                onClick={()=>{
+                  const slot = sampleModal;
+                  const s = selectedSample;
+                  // 슬롯에 sample 정보 저장 (url 없음, sampleId 있음)
+                  setCustomSounds(prev=>({
+                    ...prev,
+                    [slot]: {
+                      type: 'sample',
+                      sampleId: s.id,
+                      name: s.name,
+                      emoji: s.emoji,
+                    }
+                  }));
+                  // 모달에서 이미 들었으니 previewed 자동 true
+                  setPreviewed(prev=>({...prev, [slot]: true}));
+                  setSampleModal(null);
+                  setSelectedSample(null);
+                }}
+                className="btn bg-emerald-500 text-white px-8 py-3 t-big">
+                {selectedSample ? `✓ "${selectedSample.name}" 으로 정할래!` : '먼저 하나 골라봐'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 모드 선택 */}
       {view==='mode' && (
-        <div className="h-full flex flex-col items-center justify-center gap-5 fade-in">
+        <div className="h-full flex flex-col items-center justify-center gap-3 fade-in">
           <BackBtn/>
           <h2 className="t-huge text-indigo-700">오늘 어떤 활동을 할까요?</h2>
-          <p className="t-mid text-slate-500">선생님이 안내해주는 활동을 골라봐요</p>
-          <div className="grid grid-cols-2 gap-4">
+          <p className="t-mid text-slate-500">카드를 누르면 그 모드의 소리를 들려줄게! 👂</p>
+          <div className="grid grid-cols-2 gap-3">
             {Object.values(MODES).map(m=>{
               const sel = mode?.id===m.id;
               return (
-                <button key={m.id} onClick={()=>{ setMode(m); setSituation(null); setBpm(100); }}
-                  className={"card p-4 w-[420px] flex items-center gap-4 text-left transition-transform "+
-                    (sel?'scale-105 ring-8':'hover:scale-105')}
-                  style={{background:sel?m.color:undefined, color:sel?'white':undefined,
-                    ['--tw-ring-color']:sel?m.color+'80':undefined}}>
-                  <div className="text-7xl">{m.characterEmoji}</div>
-                  <div className="flex-1">
-                    <div className="t-big" style={{color:sel?'white':m.color, fontWeight:'bold'}}>{m.character}</div>
-                    <div className="t-sm opacity-90">{m.label}</div>
-                    <div className="t-xs opacity-70 mt-1">"{m.motto}"</div>
+                <button key={m.id}
+                  onClick={()=>{
+                    setMode(m); setSituation(null); setBpm(100);
+                    // 모드 이펙트 적용 0.4s 후 미리듣기 (wet ramp 완료 시점)
+                    setTimeout(()=>playModeSample(m), 500);
+                  }}
+                  className={"card mode-card-hover p-3 w-[420px] flex items-center gap-3 text-left "+
+                    (sel?'scale-105':'')}
+                  style={{
+                    background: sel
+                      ? 'linear-gradient(135deg, '+m.color+', '+m.color+'cc)'
+                      : 'linear-gradient(135deg, white, '+m.color+'15)',
+                    color: sel?'white':undefined,
+                    border: '5px solid '+(sel?m.color:m.color+'66'),
+                    boxShadow: sel ? '0 8px 24px '+m.color+'66' : undefined,
+                  }}>
+                  <div style={{
+                    fontSize:56,
+                    background:sel?'rgba(255,255,255,0.25)':'white',
+                    borderRadius:'50%', width:80, height:80,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    border: '3px solid '+(sel?'white':m.color),
+                    flexShrink:0,
+                  }}>{m.characterEmoji}</div>
+                  <div className="flex-1" style={{minWidth:0}}>
+                    <div className="t-big" style={{color:sel?'white':m.color, fontWeight:'bold', lineHeight:1.1}}>
+                      {m.character}
+                    </div>
+                    <div className="t-sm" style={{color:sel?'rgba(255,255,255,0.95)':'#475569', marginTop:2}}>{m.label}</div>
+                    <div className="t-xs mt-1" style={{color:sel?'rgba(255,255,255,0.85)':'#64748b', fontStyle:'italic'}}>"{m.motto}"</div>
+                    <div className="t-xs mt-1 font-bold" style={{color:sel?'rgba(255,255,255,0.9)':m.color}}>
+                      {sel ? '✓ 골랐어요!' : '▶ 누르면 소리 들려줘'}
+                    </div>
                   </div>
                 </button>
               );
             })}
           </div>
           {mode && (
-            <div className="card p-5 w-[880px] fade-in" style={{background:'rgba(254,243,199,0.95)', borderColor:'#fbbf24'}}>
-              <div className="t-big text-amber-900 mb-2 text-center">🎯 오늘 활동이 끝나면 우리는...</div>
-              <div className="flex flex-col gap-1">
+            <div className="card p-3 w-[880px] fade-in" style={{background:'rgba(254,243,199,0.95)', borderColor:'#fbbf24'}}>
+              <div className="t-mid text-amber-900 mb-1 text-center font-bold">🎯 오늘 활동이 끝나면 우리는...</div>
+              <div className="flex flex-col gap-0">
                 {mode.reflectionItems.map((item,i)=>(
-                  <div key={i} className="t-mid text-amber-800">👉 {item}</div>
+                  <div key={i} className="t-sm text-amber-800">👉 {item}</div>
                 ))}
               </div>
             </div>
           )}
-          <button onClick={()=>setView('prerecord')} disabled={!mode}
-            className="btn bg-indigo-600 text-white t-huge px-12 py-4">
+          <button onClick={()=>setView('modeIntro')} disabled={!mode}
+            className="btn bg-indigo-600 text-white t-huge px-12 py-3">
             {mode?'시작! 🚀':'활동을 골라요'}
           </button>
+        </div>
+      )}
+
+      {/* 모드 인트로 — 캐릭터 등장 (2초 후 자동 진행, 누르면 즉시) */}
+      {view==='modeIntro' && mode && (
+        <div className="h-full flex flex-col items-center justify-center gap-4 fade-in"
+          onClick={()=>setView('prerecord')}
+          style={{cursor:'pointer'}}>
+          <div className="mode-zoom" style={{fontSize:180, lineHeight:1}}>{mode.characterEmoji}</div>
+          <div className="card px-8 py-4 mode-zoom" style={{
+            background:'linear-gradient(135deg, white, '+mode.color+'22)',
+            border:'5px solid '+mode.color,
+          }}>
+            <div className="t-huge text-center" style={{color:mode.color, lineHeight:1.1}}>{mode.character}</div>
+            <div className="t-mid text-center text-slate-600" style={{marginTop:6}}>"{mode.motto}"</div>
+          </div>
+          <div className="readable-light t-sm mt-2">
+            👆 화면을 누르면 시작!
+          </div>
+          {/* 2초 후 자동 진행 */}
+          <ModeIntroAutoAdvance onDone={()=>setView('prerecord')}/>
         </div>
       )}
 
       {/* 사전 녹음 */}
       {view==='prerecord' && mode && (
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in pt-12">
+          <BackBtn/>
           <CharBubble mode={mode} text={`안녕! 나는 ${mode.character}야. 같이 ${mode.label.replace(/^[\u{1F300}-\u{1FAFF}]\s*/u,'')} 시작해볼까?`} big/>
           <RecorderUI title={mode.preTitle}
             examples={mode.preExamples}
@@ -1909,17 +2264,22 @@ function App(){
       {view==='mySounds' && mode && (
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in pt-12">
           <BackBtn/>
-          <CharBubble mode={mode} text="🎤 박수, 책상 톡톡! 짧은 소리를 녹음해줘" big/>
-          <p className="t-sm text-white/80 text-center">건너뛰어도 OK · 녹음 후 꼭 ▶ 들어보기 눌러봐</p>
+          <CharBubble mode={mode} text="🎤 짧은 소리를 녹음하거나 📚 예시에서 골라!" big/>
+          <p className="t-sm text-center" style={{
+            background:'rgba(255,255,255,0.9)', color:'#475569',
+            padding:'4px 14px', borderRadius:99
+          }}>건너뛰어도 OK · 녹음 안 되면 📚 예시 사운드 골라봐</p>
           <div className="flex gap-6">
             <CustomSoundSlot slot="my1" info={customSounds.my1} previewed={previewed.my1}
-              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound} onRename={onRenameSound}/>
+              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound}
+              onRename={onRenameSound} onOpenSamples={(slot)=>{setSampleModal(slot); setSelectedSample(null);}}/>
             <CustomSoundSlot slot="my2" info={customSounds.my2} previewed={previewed.my2}
-              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound} onRename={onRenameSound}/>
+              onRecorded={onRecordedSound} onClear={onClearSound} onPreview={onPreviewSound}
+              onRename={onRenameSound} onOpenSamples={(slot)=>{setSampleModal(slot); setSelectedSample(null);}}/>
           </div>
           {(() => {
-            const ok1 = !customSounds.my1?.url || previewed.my1;
-            const ok2 = !customSounds.my2?.url || previewed.my2;
+            const ok1 = !hasSnd(customSounds.my1) || previewed.my1;
+            const ok2 = !hasSnd(customSounds.my2) || previewed.my2;
             const canNext = ok1 && ok2;
             return (
               <button onClick={()=>setView('situation')} disabled={!canNext}
@@ -2031,9 +2391,9 @@ function App(){
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in pt-12">
           <BackBtn/>
           <CharBubble mode={mode} text="🥁 어떤 박자 모양이 좋아? 둘 다 들어봐!" big/>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
+          <div className="readable-light t-mid">
             ① ▶ 들어보기 눌러서 따라 박수 쳐봐 &nbsp; ② 마음에 드는 박자 골라봐
-          </p>
+          </div>
           <div className="flex gap-5 justify-center">
             {TIME_SIGNATURES.map(ts=>(
               <BeatPickCard key={ts.id} ts={ts}
@@ -2058,31 +2418,42 @@ function App(){
       )}
 
       {/* 단계 */}
-      {view==='stage' && (
+      {view==='stage' && (() => {
+        // 학생이 따라 할 안내 — 그리드 바로 아래 큰 글자로
+        const tutorialByStage = {
+          1: { arrow:'👆', text:'위 빈 칸을 콕! 눌러봐 → 작은 북이 들어가요' },
+          2: { arrow:'👆', text:'위에서 다른 악기 한 번 눌러봐 → 박자는 그대로, 악기만 바뀜!' },
+          3: { arrow:'1️⃣', text:'위에서 악기 고르고 → 2️⃣ 빈 칸 누르면 들어가요!' },
+        };
+        const tutorial = tutorialByStage[stage];
+        // 빈 셀이 *완전히 비어 있을 때*만 첫 클릭 유도 펄스
+        const allEmpty = grid.flat().every(c=>!c);
+        return (
         <div className="h-full flex flex-col fade-in">
           {stage>1 && <BackBtn/>}
-          <div className="flex items-center gap-3 mb-2 pr-44 mt-12" style={{height:62}}>
-            <div className="float text-5xl">🎵</div>
-            <div className="card px-5 py-2 flex-1 flex items-center" style={{minWidth:0}}>
-              <span className="t-sm text-indigo-700 truncate">{feedback||STAGE_INFO[stage].short}</span>
+          {/* 상단 정보 줄 — 짧게 (단계 제목 + BPM 슬라이더만) */}
+          <div className="flex items-center gap-3 mb-2 pr-44 mt-12" style={{height:54}}>
+            <div className="float text-4xl">{stage===1?'🥁':stage===2?'🎵':'✨'}</div>
+            <div className="card px-4 py-2 flex items-center" style={{minWidth:0}}>
+              <span className="t-mid font-bold whitespace-nowrap" style={{color:mode.color}}>
+                {STAGE_INFO[stage].title}
+              </span>
             </div>
-            <button className="btn bg-amber-300 text-amber-900 px-5 py-2 t-sm whitespace-nowrap"
-              onClick={()=>setShowGuide(true)}>💡 도움말</button>
-            <div className="card px-4 py-1 flex items-center gap-2">
-              <span className="text-2xl">🐢</span>
-              <input type="range" min="50" max="150" value={bpm} onChange={e=>setBpm(Number(e.target.value))}/>
-              <span className="text-2xl">🐰</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-3 mb-2" style={{height:42}}>
-            {situation && <div className="card px-4 py-1 t-sm text-indigo-600 whitespace-nowrap">{situation.emoji} {situation.name}</div>}
-            <div className="card px-4 py-1 t-sm whitespace-nowrap" style={{color: getTSInfo(timeSig).color}}>
+            {situation && <div className="card px-3 py-2 t-sm text-indigo-600 whitespace-nowrap">{situation.emoji} {situation.name}</div>}
+            <div className="card px-3 py-2 t-sm whitespace-nowrap" style={{color: getTSInfo(timeSig).color}}>
               {getTSInfo(timeSig).emoji} {getTSInfo(timeSig).label}
             </div>
-            <div className="t-big text-indigo-700 whitespace-nowrap">{STAGE_INFO[stage].title}</div>
+            <div className="flex-1"/>
+            <button className="btn bg-amber-300 text-amber-900 px-4 py-2 t-sm whitespace-nowrap"
+              onClick={()=>setShowGuide(true)}>💡 도움말</button>
+            <div className="card px-3 py-1 flex items-center gap-2">
+              <span className="text-xl">🐢</span>
+              <input type="range" min="50" max="150" value={bpm} onChange={e=>setBpm(Number(e.target.value))} style={{width:120}}/>
+              <span className="text-xl">🐰</span>
+            </div>
           </div>
 
+          {/* 악기 선택 줄 */}
           <div className="flex justify-center gap-3 mb-2 flex-wrap">
             {visibleInstruments(stage).map(inst=>(
               <div key={inst.id}
@@ -2091,24 +2462,63 @@ function App(){
                   else { setSelectedInst(inst.id); trigger(inst.id); }
                 }}
                 className={"inst-card "+(selectedInst===inst.id?'sel':'')}
-                style={{background:inst.color, width:130, height:118, color:'white'}}>
-                <InstIcon type={inst.id} size={52}/>
-                <div className="t-sm mt-1">{inst.name}</div>
+                style={{background:inst.color, width:120, height:110, color:'white'}}>
+                <InstIcon type={inst.id} size={48} emoji={inst.emoji}/>
+                <div className="t-sm mt-1" style={{textShadow:'0 1px 3px rgba(0,0,0,0.3)'}}>{inst.name}</div>
               </div>
             ))}
           </div>
 
-          {/* 장면 힌트 — 학생이 막힐 때 도움 (자율 유지: 듣기는 자유, 가져오기는 명시적 선택) */}
+          {/* 비트 그리드 — 빈 셀이 모드 색감으로 살짝 (옅게) */}
+          <div className="card mx-auto p-4 mb-2" style={{
+            width:1130,
+            border:'3px solid '+mode.color+'55',
+            background:'linear-gradient(135deg, rgba(255,255,255,0.92), '+mode.color+'14)',
+          }}>
+            {(stage===3?[0,1,2]:[0]).map(r=>(
+              <div key={r} className="flex justify-center gap-2 mb-2">
+                {Array.from({length:COLS}).map((_,c)=>{
+                  const id=grid[r][c]; const inst=id?getInstObj(id):null;
+                  const isAccent = getTSInfo(timeSig).accent[c]===1;
+                  // 첫 빈 칸에만 펄스 유도 — 그리드 완전 비어있을 때, 첫 줄 첫 칸
+                  const showPulse = allEmpty && r===0 && c===0 && !inst;
+                  return (
+                    <div key={c} onClick={()=>handleCell(r,c)}
+                      className={"beat-cell "+(step===c?'now':'')+(inst?' filled':'')+(showPulse?' pulse-empty':'')}
+                      style={{
+                        width: timeSig===3?160:128,
+                        height:80,
+                        background: inst ? inst.color : (isAccent
+                          ? 'linear-gradient(135deg, '+mode.color+'22, '+mode.color+'33)'
+                          : 'rgba(255,255,255,0.65)'),
+                        borderColor: !inst && isAccent ? getTSInfo(timeSig).color+'aa' : (inst ? undefined : mode.color+'55'),
+                        borderWidth: !inst && isAccent ? 5 : 3,
+                      }}>
+                      {inst && <InstIcon type={inst.id} size={50} emoji={inst.emoji}/>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {/* ★ 그리드 바로 아래 큰 튜토리얼 안내 — 학생이 바로 보고 따라 함 */}
+          <div className="flex justify-center mb-2">
+            <div className="tutorial-tip">
+              <span className="arrow-bounce" style={{fontSize:26}}>{tutorial.arrow}</span>
+              <span>{feedback || tutorial.text}</span>
+            </div>
+          </div>
+
+          {/* 장면 추천 박자 — stage 1, 정해진 장면 있을 때 */}
           {situation?.seed && stage===1 && (
             <div className="flex justify-center gap-2 mb-2 fade-in">
               <button onClick={()=>playSituationSample(situation)}
                 className="btn px-4 py-2 t-sm"
-                style={{background:'rgba(255,255,255,0.85)', color:mode.color, border:'2px solid '+mode.color+'66'}}>
+                style={{background:'rgba(255,255,255,0.92)', color:mode.color, border:'2px solid '+mode.color+'66'}}>
                 🌱 {situation.emoji} {situation.name} 추천 박자 들어보기
               </button>
               <button onClick={()=>{
-                  // 명시적 "가져오기" — 학생이 누른 행위로만 첫 줄에 시드 패턴 채움
-                  // 비어 있는 그리드에만 동작 (학생이 만든 것 덮어쓰지 않음)
                   const empty = grid[0].every(c=>!c);
                   if(!empty){
                     if(!confirm('내가 만든 박자가 있어요. 추천으로 바꿀까요?')) return;
@@ -2125,39 +2535,6 @@ function App(){
               </button>
             </div>
           )}
-
-          {/* 비트 그리드 — 빈 셀이 모드 색감으로 살짝 물들어 분위기 일관 */}
-          <div className="card mx-auto p-4 mb-3" style={{
-            width:1130,
-            border:'3px solid '+mode.color+'55',
-            background:'linear-gradient(135deg, '+mode.color+'08, '+mode.color+'14)',
-          }}>
-            {(stage===3?[0,1,2]:[0]).map(r=>(
-              <div key={r} className="flex justify-center gap-2 mb-2">
-                {Array.from({length:COLS}).map((_,c)=>{
-                  const id=grid[r][c]; const inst=id?getInstObj(id):null;
-                  // 강박 표시 — 박자 모양에 따라 칸 배경 살짝
-                  const isAccent = getTSInfo(timeSig).accent[c]===1;
-                  return (
-                    <div key={c} onClick={()=>handleCell(r,c)}
-                      className={"beat-cell "+(step===c?'now':'')+(inst?' filled':'')}
-                      style={{
-                        width: timeSig===3?160:128,
-                        height:80,
-                        // 빈 셀: 모드 색감 + accent는 진하게 (4박 강박/3박 강박)
-                        background: inst ? inst.color : (isAccent
-                          ? 'linear-gradient(135deg, '+mode.color+'30, '+mode.color+'45)'
-                          : 'linear-gradient(135deg, '+mode.color+'10, '+mode.color+'1a)'),
-                        borderColor: !inst && isAccent ? getTSInfo(timeSig).color+'aa' : (inst ? undefined : mode.color+'40'),
-                        borderWidth: !inst && isAccent ? 5 : 4,
-                      }}>
-                      {inst && <InstIcon type={inst.id} size={50}/>}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
 
           {/* 연주/녹음/다음 */}
           <div className="flex justify-center gap-3 mb-2 flex-wrap" style={{minHeight:60}}>
@@ -2206,16 +2583,17 @@ function App(){
             short={STAGE_INFO[stage].short} steps={STAGE_INFO[stage].steps}
             onClose={()=>setShowGuide(false)}/>}
         </div>
-      )}
+        );
+      })()}
 
       {/* 규칙 찾기 */}
       {view==='rule' && (
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in pt-12">
           <BackBtn/>
           <CharBubble mode={mode} text="🥁 박자 모양을 골라봐!" big/>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
+          <div className="readable-light t-mid">
             먼저 손뼉으로 따라 쳐 보고, 들어본 다음 골라요
-          </p>
+          </div>
           <div className="flex gap-3 flex-wrap justify-center">
             {getRulePatterns(timeSig).map(rp=>(
               <RuleCard key={rp.id} rp={rp} bpm={bpm}
@@ -2237,18 +2615,18 @@ function App(){
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in pt-12">
           <BackBtn/>
           <CharBubble mode={mode} text="💖 가장 마음에 든 악기를 골라봐!"/>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>최대 2개까지 가능</p>
+          <div className="readable-light t-mid">최대 2개까지 가능</div>
           <div className="flex gap-4 flex-wrap justify-center">
             {[...INSTRUMENTS,
-              ...(customSounds.my1?.url?[getInstObj('my1')]:[]),
-              ...(customSounds.my2?.url?[getInstObj('my2')]:[])].map(inst=>{
+              ...(hasSnd(customSounds.my1)?[getInstObj('my1')]:[]),
+              ...(hasSnd(customSounds.my2)?[getInstObj('my2')]:[])].map(inst=>{
               const rank = favRank(inst.id);
               return (
                 <button key={inst.id} onClick={()=>{toggleFavorite(inst.id);}}
                   className={"card p-4 w-[180px] flex flex-col items-center gap-2 transition-transform "+
                     (rank?'scale-110 ring-8 ring-pink-300':'hover:scale-105')}
                   style={{background:rank?inst.color:undefined}}>
-                  <InstIcon type={inst.id} size={56}/>
+                  <InstIcon type={inst.id} size={56} emoji={inst.emoji}/>
                   <div className={"t-mid "+(rank?'text-white':'text-indigo-700')}>{inst.name}</div>
                   <div className={"t-xs "+(rank?'text-white/90':'text-slate-500')}>{inst.timbre}</div>
                   {rank && <div className="bg-white text-pink-500 rounded-full px-3 py-1 t-sm font-bold">{rank}</div>}
@@ -2280,37 +2658,37 @@ function App(){
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in pt-12">
           <BackBtn/>
           <CharBubble mode={mode} text="🎶 두 악기를 골라서 같이 들어봐!" big/>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
+          <div className="readable-light t-mid">
             여러 조합을 들어보고 마음에 드는 짝꿍을 정해봐
-          </p>
+          </div>
           <div className="flex gap-5 items-center">
             <div className="flex flex-col items-center gap-1">
-              <div className="t-mid text-white font-bold" style={{textShadow:'0 1px 3px rgba(0,0,0,0.3)'}}>악기 A</div>
+              <div className="card px-4 py-1 t-mid font-bold" style={{color:'#475569'}}>악기 A</div>
               <div className="flex flex-col gap-1">
                 {[...INSTRUMENTS,
-                  ...(customSounds.my1?.url?[getInstObj('my1')]:[]),
-                  ...(customSounds.my2?.url?[getInstObj('my2')]:[])].map(inst=>(
+                  ...(hasSnd(customSounds.my1)?[getInstObj('my1')]:[]),
+                  ...(hasSnd(customSounds.my2)?[getInstObj('my2')]:[])].map(inst=>(
                   <button key={inst.id} onClick={()=>{ setPairA(inst.id); trigger(inst.id); }}
                     className={"btn flex items-center gap-2 px-3 py-1 t-sm "+
                       (pairA===inst.id?'text-white':'bg-white text-slate-600')}
                     style={{background:pairA===inst.id?inst.color:undefined}}>
-                    <InstIcon type={inst.id} size={28}/>{inst.name}
+                    <InstIcon type={inst.id} size={28} emoji={inst.emoji}/>{inst.name}
                   </button>
                 ))}
               </div>
             </div>
             <div className="text-5xl text-white">＋</div>
             <div className="flex flex-col items-center gap-1">
-              <div className="t-mid text-white font-bold" style={{textShadow:'0 1px 3px rgba(0,0,0,0.3)'}}>악기 B</div>
+              <div className="card px-4 py-1 t-mid font-bold" style={{color:'#475569'}}>악기 B</div>
               <div className="flex flex-col gap-1">
                 {[...INSTRUMENTS,
-                  ...(customSounds.my1?.url?[getInstObj('my1')]:[]),
-                  ...(customSounds.my2?.url?[getInstObj('my2')]:[])].map(inst=>(
+                  ...(hasSnd(customSounds.my1)?[getInstObj('my1')]:[]),
+                  ...(hasSnd(customSounds.my2)?[getInstObj('my2')]:[])].map(inst=>(
                   <button key={inst.id} onClick={()=>{ setPairB(inst.id); trigger(inst.id); }}
                     className={"btn flex items-center gap-2 px-3 py-1 t-sm "+
                       (pairB===inst.id?'text-white':'bg-white text-slate-600')}
                     style={{background:pairB===inst.id?inst.color:undefined}}>
-                    <InstIcon type={inst.id} size={28}/>{inst.name}
+                    <InstIcon type={inst.id} size={28} emoji={inst.emoji}/>{inst.name}
                   </button>
                 ))}
               </div>
@@ -2540,7 +2918,10 @@ function App(){
                   <div className="info-line">{getTSInfo(timeSig).emoji} 박자: <b>{getTSInfo(timeSig).label}</b></div>
                   {favorites.length>0 && <div className="info-line">💖 좋아한 악기: <b>{favorites.map(id=>getInstObj(id)?.name).join(', ')}</b></div>}
                   {pairA && pairB && <div className="info-line">🎶 어울리는 짝꿍: <b>{getInstObj(pairA).name} + {getInstObj(pairB).name}</b></div>}
-                  {(customSounds.my1?.url||customSounds.my2?.url) && <div className="info-line">🌿 내 소리: <b>{[customSounds.my1?.name,customSounds.my2?.name].filter(Boolean).join(', ')}</b></div>}
+                  {(hasSnd(customSounds.my1)||hasSnd(customSounds.my2)) && <div className="info-line">🌿 내 소리: <b>{
+                    [customSounds.my1, customSounds.my2].filter(hasSnd)
+                      .map(cs=>(cs.emoji?cs.emoji+' ':'')+cs.name).join(', ')
+                  }</b></div>}
                 </div>
               </div>
 
@@ -2596,10 +2977,12 @@ function App(){
       {/* 같은 모둠 친구 작품 듣기 */}
       {view==='groupShow' && mode && (
         <div className="h-full flex flex-col items-center justify-center gap-4 fade-in p-6">
-          <h2 className="t-huge text-white" style={{textShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>🎶 우리 모둠 친구들의 음악</h2>
-          <p className="t-mid text-white/90" style={{textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
+          <div className="card px-8 py-3">
+            <h2 className="t-huge" style={{color:mode.color}}>🎶 우리 모둠 친구들의 음악</h2>
+          </div>
+          <div className="readable-light t-mid">
             👂 {student?.group} 친구들의 작품을 들어봐요
-          </p>
+          </div>
           {groupWorks.length===0 ? (
             <div className="card p-8 w-[700px] text-center">
               <div className="text-6xl mb-3">🌱</div>
