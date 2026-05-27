@@ -15,7 +15,10 @@
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}
 body{font-family:'Jua',sans-serif;
   background:linear-gradient(135deg,#a8edea 0%,#fed6e3 45%,#fdeff9 100%);
-  background-attachment:fixed;color:#3a3a5c;user-select:none;-webkit-tap-highlight-color:transparent;}
+  background-attachment:fixed;color:#3a3a5c;user-select:none;-webkit-tap-highlight-color:transparent;
+  word-break:keep-all; overflow-wrap:break-word; line-break:strict;}
+/* 한국어는 어절(띄어쓰기) 단위로 줄바꿈 — 글자 중간 잘림 방지 */
+*, *::before, *::after{ word-break:keep-all; overflow-wrap:break-word; }
 #viewport{position:fixed;inset:0;overflow:hidden;}
 #stage{position:absolute;width:1280px;height:800px;transform-origin:top left;}
 .t-title{font-size:60px;line-height:1.1;}
@@ -61,6 +64,12 @@ textarea,input[type=text]{font-family:'Jua',sans-serif;}
 .char-on{color:#ec4899;text-shadow:0 2px 8px rgba(236,72,153,.35);}
 .fade-in{animation:fadeIn .35s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+/* 한국어 어절 단위 줄바꿈 — 음절 중간에서 안 끊기게 (1-2학년 가독성) */
+body, input, button, select, textarea, p, div, span, h1, h2, h3, h4 {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
 .modal-bg{position:absolute;inset:0;background:rgba(60,50,90,.45);backdrop-filter:blur(6px);
   display:flex;align-items:center;justify-content:center;z-index:500;}
 .back-btn{position:absolute;top:24px;left:24px;}
@@ -431,31 +440,101 @@ const INSTRUMENTS = [
   {id:'castanets',name:'캐스터네츠',  color:'#f87171', timbre:'딱딱 짧은 소리'},
 ];
 
+/* 구글시트에 박자 패턴 저장 시 색 사각형 이모지로 변환
+   학생/교사가 한눈에 알아보기 쉽게 (빈 칸 ⬜ / 악기별 색)
+   유니코드 색 사각형은 한정적이라 분홍은 보라로 매핑 */
+const PATTERN_EMOJI = {
+  drum:       '🟧',  // 주황 (작은 북)
+  triangle:   '🟨',  // 노랑 (트라이앵글)
+  tambourine: '🟪',  // 보라 (탬버린 — 분홍 사각형 없어서 대체)
+  castanets:  '🟥',  // 빨강 (캐스터네츠)
+  my1:        '🟦',  // 파랑 (내 소리 1)
+  my2:        '🟩',  // 초록 (내 소리 2)
+};
+function gridToEmojiPattern(row){
+  return row.map(c=>c ? (PATTERN_EMOJI[c]||'⬛') : '⬜').join('');
+}
+
 /* ===== 예시 사운드 라이브러리 — 녹음 안 될 때 대체 ===== */
 /* 마이크 권한 거부/학교 컴퓨터 마이크 없음/조용한 환경 어려움 등 */
 /* 학생이 "📚 예시 사운드 고르기" 버튼으로 my1/my2 슬롯에 즉시 넣을 수 있음 */
-/* play(synth,time) — synth는 useEffect에서 미리 등록된 Tone.js 합성기 */
+/* play(synths, filters, time) — synths/filters는 useEffect에서 미리 등록된 ref */
+/* 자연감 향상 기법:
+   1) 멀티 layer (예: 박수 = white burst + pink tail)
+   2) Micro-timing (양손 박수는 1-3ms 차이)
+   3) Random variation (pitch, velocity, decay 매번 살짝 다름)
+   4) Filter chain (자연 소리의 주파수 대역만 강조) */
 const SAMPLE_SOUNDS = [
-  {id:'clap',    name:'박수',        emoji:'👏', desc:'짝짝짝!',
-    play:(s,t)=>s.triggerAttackRelease('16n', t)},
-  {id:'stomp',   name:'발 구르기',    emoji:'👣', desc:'쿵쿵쿵!',
-    play:(s,t)=>s.triggerAttackRelease('C1','8n', t, 0.9)},
-  {id:'table',   name:'책상 톡톡',    emoji:'✏️', desc:'톡톡톡!',
-    play:(s,t)=>s.triggerAttackRelease('C4','16n', t, 0.7)},
-  {id:'snap',    name:'손가락 딱',    emoji:'🤏', desc:'딱딱!',
-    play:(s,t)=>s.triggerAttackRelease('32n', t)},
-  {id:'paper',   name:'종이 사락',    emoji:'📜', desc:'사락사락',
-    play:(s,t)=>s.triggerAttackRelease('8n', t)},
-  {id:'knock',   name:'문 두드리기',  emoji:'🚪', desc:'똑똑똑',
-    play:(s,t)=>s.triggerAttackRelease('C3','16n', t, 0.8)},
-  {id:'whistle', name:'휘파람',      emoji:'😗', desc:'휘이~',
-    play:(s,t)=>s.triggerAttackRelease('A5','4n', t)},
-  {id:'water',   name:'물방울',      emoji:'💧', desc:'똑똑',
-    play:(s,t)=>s.triggerAttackRelease('C6','16n', t, 0.9)},
-  {id:'bang',    name:'쾅',          emoji:'💥', desc:'쾅!',
-    play:(s,t)=>s.triggerAttackRelease('A0','4n', t, 1.0)},
-  {id:'zipper',  name:'지퍼',        emoji:'🎒', desc:'지이익',
-    play:(s,t)=>s.triggerAttackRelease('4n', t)},
+  {id:'clap', name:'박수', emoji:'👏', desc:'짝짝짝!',
+    play:(S,F,t)=>{
+      // 양손 박수 — 두 layer가 1-3ms 차이로 trigger
+      const offset = 0.001 + Math.random()*0.002;
+      const v1 = 0.85 + Math.random()*0.15;
+      const v2 = 0.5 + Math.random()*0.2;
+      S.clapWhite?.triggerAttackRelease('32n', t, v1);
+      S.clapPink?.triggerAttackRelease('16n', t+offset, v2);
+    }},
+  {id:'stomp', name:'발 구르기', emoji:'👣', desc:'쿵쿵쿵!',
+    play:(S,F,t)=>{
+      // thud (저음 충격) + rumble (잔향)
+      const pitch = Math.random()<0.5 ? 'C0' : 'C1';
+      const vel = 0.9 + Math.random()*0.1;
+      S.stompThud?.triggerAttackRelease(pitch, '8n', t, vel);
+      S.stompRumble?.triggerAttackRelease('16n', t+0.005, 0.5+Math.random()*0.3);
+    }},
+  {id:'table', name:'책상 톡톡', emoji:'✏️', desc:'톡톡톡!',
+    play:(S,F,t)=>{
+      // wood impact + transient — 매번 살짝 다른 pitch (나무 두께 차이)
+      const pitches = ['C3','D3','C4','E4','C5'];
+      const pitch = pitches[Math.floor(Math.random()*pitches.length)];
+      S.tableWood?.triggerAttackRelease(pitch, '32n', t, 0.85+Math.random()*0.15);
+      S.tableImpact?.triggerAttackRelease('64n', t);
+      // 필터 frequency 미세 변동 (같은 책상의 다른 지점 때리는 느낌)
+      if(F.tableBP){
+        try{ F.tableBP.frequency.cancelScheduledValues(t); F.tableBP.frequency.setValueAtTime(550+Math.random()*300, t); }catch(e){}
+      }
+    }},
+  {id:'snap', name:'손가락 딱', emoji:'🤏', desc:'딱딱!',
+    play:(S,F,t)=>{
+      // 짧은 air burst + tonal click
+      S.snapBurst?.triggerAttackRelease('64n', t, 0.9);
+      S.snapTone?.triggerAttackRelease('64n', t+0.0008, 0.55+Math.random()*0.2);
+    }},
+  {id:'paper', name:'종이 사락', emoji:'📜', desc:'사락사락',
+    play:(S,F,t)=>{
+      // 3-5번의 짧은 burst — "사락사락" 연속음
+      const n = 3 + Math.floor(Math.random()*3);
+      for(let i=0; i<n; i++){
+        const ti = t + i*(0.045+Math.random()*0.02);
+        S.paperNoise?.triggerAttackRelease('32n', ti, 0.35+Math.random()*0.4);
+      }
+    }},
+  {id:'knock', name:'문 두드리기', emoji:'🚪', desc:'똑똑똑',
+    play:(S,F,t)=>{
+      // 3번 — 똑똑똑 (조금씩 다른 세기)
+      const pitch = Math.random()<0.5 ? 'C2' : 'D2';
+      S.knockWood?.triggerAttackRelease(pitch, '32n', t,       0.95);
+      S.knockWood?.triggerAttackRelease(pitch, '32n', t+0.085, 0.82);
+      S.knockWood?.triggerAttackRelease(pitch, '32n', t+0.17,  0.9);
+    }},
+  {id:'bang', name:'쾅', emoji:'💥', desc:'쾅!',
+    play:(S,F,t)=>{
+      // 깊은 boom + crash impact 동시
+      S.bangBoom?.triggerAttackRelease('A0', '4n', t, 1.0);
+      S.bangCrash?.triggerAttackRelease('8n', t, 0.7);
+    }},
+  {id:'zipper', name:'지퍼', emoji:'🎒', desc:'지이익',
+    play:(S,F,t)=>{
+      // brown noise + 필터 sweep (low → high, 자연스러운 zip 소리)
+      S.zipperNoise?.triggerAttackRelease('4n', t, 0.9);
+      if(F.zipperBP){
+        try{
+          F.zipperBP.frequency.cancelScheduledValues(t);
+          F.zipperBP.frequency.setValueAtTime(600, t);
+          F.zipperBP.frequency.linearRampToValueAtTime(2400, t+0.3);
+        }catch(e){}
+      }
+    }},
 ];
 const CUSTOM_COLORS = {my1:'#a78bfa', my2:'#2dd4bf'};
 const CUSTOM_DEFAULT_NAMES = {my1:'내 소리 1', my2:'내 소리 2'};
@@ -529,6 +608,12 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#1e1b4b 0%,#3730a3 25%,#6366f1 55%,#93c5fd 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'광활한 우주를 음악으로 그려요',
+    // 컨셉 설명 — 1-2학년이 "어떤 활동인지" 즉시 이해할 수 있게
+    concept:{
+      what:'바다 · 우주 · 동굴 · 정글',
+      feeling:'트라이앵글이 띠~잉 길게 울려요',
+      activity:'그곳에 있다고 상상해봐!',
+    },
     // 모드 카드 누르면 들려주는 4박 맛보기 — 메아리 큰 트라이앵글
     previewSample:['triangle',null,'triangle',null,'triangle',null,'triangle',null],
     situations:[
@@ -564,6 +649,11 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#7c2d12 0%,#c2410c 25%,#f97316 55%,#fed7aa 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'주변 물건이 악기가 되는 마법',
+    concept:{
+      what:'책상 · 박수 · 연필 · 종이',
+      feeling:'박수가 짝짝! 책상이 톡톡!',
+      activity:'주변 물건 소리로 만들어봐!',
+    },
     // 일상 물건 소리 — 책상 톡톡 + 박수 또렷 (메아리 거의 X)
     previewSample:['table','clap','table','clap','table','clap','table','clap'],
     situations:[
@@ -599,6 +689,11 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#581c87 0%,#a855f7 30%,#e879f9 60%,#fbcfe8 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'내 마음을 음악으로 노래해요',
+    concept:{
+      what:'즐거움 · 졸림 · 신남 · 차분함',
+      feeling:'부드럽게 띠~잉~ 마음이 편안',
+      activity:'내 기분에 어울리는 박자로!',
+    },
     // 마음 — 트라이앵글 부드럽게 + 살짝 메아리
     previewSample:['triangle',null,null,null,'triangle',null,null,null],
     situations:[
@@ -634,6 +729,11 @@ const MODES = {
     bgGradient:'linear-gradient(135deg,#064e3b 0%,#10b981 30%,#34d399 60%,#a7f3d0 100%)',
     cardBg:'rgba(255,255,255,0.92)',
     motto:'무엇이든 자유롭게 그려요',
+    concept:{
+      what:'달팽이 · 거북이 · 토끼 · 치타',
+      feeling:'캐스터네츠가 딱딱! 자유롭게',
+      activity:'느린 음악부터 빠른 음악까지!',
+    },
     // 자유 — 캐스터네츠 가득 (자유로움 + 빠름)
     previewSample:['castanets',null,'castanets',null,'castanets',null,'castanets',null],
     situations:[
@@ -873,6 +973,15 @@ function RecorderUI({title, examples, onComplete}){
 function ModeIntroAutoAdvance({onDone}){
   useEffect(()=>{
     const t = setTimeout(onDone, 2400);
+    return ()=>clearTimeout(t);
+  },[]);
+  return null;
+}
+
+/* 모드 인트로 진입 시 미리듣기 한 번 자동 재생 */
+function ModeIntroAutoPlay({onPlay}){
+  useEffect(()=>{
+    const t = setTimeout(onPlay, 700); // 화면 fade-in 후
     return ()=>clearTimeout(t);
   },[]);
   return null;
@@ -1202,6 +1311,7 @@ function App(){
 
   const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), recorder=useRef(null);
   const sampleSynths=useRef({}); // 예시 사운드 합성기 (박수·발구르기·책상 등)
+  const sampleFilters=useRef({}); // 예시 사운드용 필터/EQ 체인 (자연감 향상)
   const customSoundsRef=useRef({my1:null,my2:null}); // playOne/trigger에서 최신 sample 참조용
   const players=useRef({my1:null,my2:null});
   const loopCount=useRef(0), lastCol=useRef(-1);
@@ -1296,29 +1406,93 @@ function App(){
 
     // ▼ 예시 사운드 합성기 — 학생 녹음 안 될 때 대체용
     //   모드 이펙트 체인을 똑같이 통과 → 우주에선 박수도 메아리 / 일상에선 깨끗
+    //   ★ 자연감 향상: 각 sample에 전용 filter chain + layered synthesis
+    //   play 함수에서 멀티 trigger + random variation 으로 "같은 소리 반복" 기계감 제거
+
+    // 박수: HighPass + BandPass + 양손 layered noise (white + pink)
+    sampleFilters.current.clapHP = new Tone.Filter({type:'highpass', frequency:1100, Q:0.8}).connect(delay);
+    sampleFilters.current.clapBP = new Tone.Filter({type:'bandpass', frequency:2400, Q:1.4}).connect(sampleFilters.current.clapHP);
+
+    // 발구르기: LowPass + 저음 강조
+    sampleFilters.current.stompLP = new Tone.Filter({type:'lowpass', frequency:180, Q:1.2}).connect(delay);
+
+    // 책상 톡톡: BandPass mid-high
+    sampleFilters.current.tableBP = new Tone.Filter({type:'bandpass', frequency:700, Q:2.2}).connect(delay);
+
+    // 손가락 딱: HighPass + 짧은 noise
+    sampleFilters.current.snapHP = new Tone.Filter({type:'highpass', frequency:2800, Q:1}).connect(delay);
+
+    // 종이 사락: BandPass 중-고음
+    sampleFilters.current.paperBP = new Tone.Filter({type:'bandpass', frequency:4500, Q:1.5}).connect(delay);
+
+    // 문 두드리기: LowPass + 나무 울림 (BandPass 보조)
+    sampleFilters.current.knockBP = new Tone.Filter({type:'bandpass', frequency:380, Q:3}).connect(delay);
+
+    // 휘파람: BandPass tight (좁은 주파수만)
+    sampleFilters.current.whistleBP = new Tone.Filter({type:'bandpass', frequency:1800, Q:4}).connect(delay);
+
+    // 물방울: BandPass + 짧은 pitch sweep
+    sampleFilters.current.waterBP = new Tone.Filter({type:'bandpass', frequency:1500, Q:3}).connect(delay);
+
+    // 쾅: 자유로운 wide spectrum (filter 없이 직접 delay로)
+    // bang은 filter 없음
+
+    // 지퍼: BandPass + filter sweep
+    sampleFilters.current.zipperBP = new Tone.Filter({type:'bandpass', frequency:1200, Q:1.8}).connect(delay);
+
     sampleSynths.current = {
-      clap:    new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.001,decay:0.18,sustain:0,release:0.05}}).connect(delay),
-      stomp:   new Tone.MembraneSynth({pitchDecay:0.1,octaves:8,envelope:{attack:0.001,decay:0.4,sustain:0.01,release:0.2}}).connect(delay),
-      table:   new Tone.MembraneSynth({pitchDecay:0.005,octaves:2,envelope:{attack:0.001,decay:0.08,sustain:0,release:0.05}}).connect(delay),
-      snap:    new Tone.MetalSynth({frequency:500,envelope:{attack:0.001,decay:0.1,release:0.05},harmonicity:6.5,modulationIndex:40,resonance:8000,octaves:1}).connect(delay),
-      paper:   new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.04,decay:0.25,sustain:0,release:0.1}}).connect(delay),
-      knock:   new Tone.MembraneSynth({pitchDecay:0.02,octaves:3,envelope:{attack:0.001,decay:0.12,sustain:0,release:0.08}}).connect(delay),
-      whistle: new Tone.FMSynth({harmonicity:1,modulationIndex:1,oscillator:{type:'sine'},envelope:{attack:0.04,decay:0.2,sustain:0.4,release:0.15}}).connect(delay),
-      water:   new Tone.FMSynth({harmonicity:3,modulationIndex:10,oscillator:{type:'sine'},envelope:{attack:0.001,decay:0.18,sustain:0,release:0.1}}).connect(delay),
-      bang:    new Tone.MembraneSynth({pitchDecay:0.15,octaves:10,envelope:{attack:0.001,decay:0.5,sustain:0.05,release:0.25}}).connect(delay),
-      zipper:  new Tone.NoiseSynth({noise:{type:'brown'}, envelope:{attack:0.05,decay:0.35,sustain:0.2,release:0.1}}).connect(delay),
+      // 박수 — 두 layer (white burst + pink tail)
+      clapWhite: new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.0005, decay:0.06, sustain:0, release:0.02}}).connect(sampleFilters.current.clapBP),
+      clapPink:  new Tone.NoiseSynth({noise:{type:'pink'},  envelope:{attack:0.0008, decay:0.14, sustain:0, release:0.05}}).connect(sampleFilters.current.clapHP),
+
+      // 발구르기 — 저음 thud + 약한 rumble
+      stompThud:   new Tone.MembraneSynth({pitchDecay:0.12, octaves:7, envelope:{attack:0.001, decay:0.35, sustain:0.01, release:0.18}}).connect(sampleFilters.current.stompLP),
+      stompRumble: new Tone.NoiseSynth({noise:{type:'brown'}, envelope:{attack:0.001, decay:0.18, sustain:0, release:0.1}}).connect(sampleFilters.current.stompLP),
+
+      // 책상 톡톡 — 짧은 wood impact (membrane + filtered noise)
+      tableWood:   new Tone.MembraneSynth({pitchDecay:0.008, octaves:1.5, envelope:{attack:0.001, decay:0.06, sustain:0, release:0.04}}).connect(sampleFilters.current.tableBP),
+      tableImpact: new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.0005, decay:0.03, sustain:0, release:0.02}}).connect(sampleFilters.current.tableBP),
+
+      // 손가락 딱 — 짧은 burst
+      snapBurst:   new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.0005, decay:0.04, sustain:0, release:0.02}}).connect(sampleFilters.current.snapHP),
+      snapTone:    new Tone.MetalSynth({frequency:1200, envelope:{attack:0.001, decay:0.05, release:0.03}, harmonicity:6, modulationIndex:40, resonance:6000, octaves:1}).connect(sampleFilters.current.snapHP),
+
+      // 종이 사락 — pink noise sweep
+      paperNoise:  new Tone.NoiseSynth({noise:{type:'pink'}, envelope:{attack:0.04, decay:0.18, sustain:0, release:0.1}}).connect(sampleFilters.current.paperBP),
+
+      // 문 두드리기 — wood knock (membrane + tail)
+      knockWood:   new Tone.MembraneSynth({pitchDecay:0.015, octaves:2.5, envelope:{attack:0.001, decay:0.08, sustain:0, release:0.05}}).connect(sampleFilters.current.knockBP),
+
+      // 휘파람 — 부드러운 sine + 살짝 떨림
+      whistleTone: new Tone.FMSynth({harmonicity:1, modulationIndex:0.3, oscillator:{type:'sine'}, envelope:{attack:0.06, decay:0.15, sustain:0.5, release:0.18}}).connect(sampleFilters.current.whistleBP),
+
+      // 물방울 — pluck pitch + filter
+      waterDrop:   new Tone.FMSynth({harmonicity:2.5, modulationIndex:6, oscillator:{type:'sine'}, envelope:{attack:0.001, decay:0.15, sustain:0, release:0.1}}).connect(sampleFilters.current.waterBP),
+
+      // 쾅 — 깊은 boom + crash noise (filter 없이)
+      bangBoom:    new Tone.MembraneSynth({pitchDecay:0.15, octaves:10, envelope:{attack:0.001, decay:0.45, sustain:0.05, release:0.25}}).connect(delay),
+      bangCrash:   new Tone.NoiseSynth({noise:{type:'white'}, envelope:{attack:0.001, decay:0.1, sustain:0, release:0.05}}).connect(delay),
+
+      // 지퍼 — brown noise + filter sweep (play 함수에서 자동 sweep)
+      zipperNoise: new Tone.NoiseSynth({noise:{type:'brown'}, envelope:{attack:0.04, decay:0.28, sustain:0.15, release:0.1}}).connect(sampleFilters.current.zipperBP),
     };
-    // 볼륨 균형
-    sampleSynths.current.clap.volume.value = -3;
-    sampleSynths.current.stomp.volume.value = 5;
-    sampleSynths.current.table.volume.value = 2;
-    sampleSynths.current.snap.volume.value = -2;
-    sampleSynths.current.paper.volume.value = -8;
-    sampleSynths.current.knock.volume.value = 2;
-    sampleSynths.current.whistle.volume.value = -5;
-    sampleSynths.current.water.volume.value = -2;
-    sampleSynths.current.bang.volume.value = 4;
-    sampleSynths.current.zipper.volume.value = -10;
+
+    // 볼륨 균형 — layered 라 각각 보정
+    sampleSynths.current.clapWhite.volume.value = -2;
+    sampleSynths.current.clapPink.volume.value = -8;
+    sampleSynths.current.stompThud.volume.value = 4;
+    sampleSynths.current.stompRumble.volume.value = -6;
+    sampleSynths.current.tableWood.volume.value = 0;
+    sampleSynths.current.tableImpact.volume.value = -8;
+    sampleSynths.current.snapBurst.volume.value = -5;
+    sampleSynths.current.snapTone.volume.value = -8;
+    sampleSynths.current.paperNoise.volume.value = -10;
+    sampleSynths.current.knockWood.volume.value = 3;
+    sampleSynths.current.whistleTone.volume.value = -3;
+    sampleSynths.current.waterDrop.volume.value = -4;
+    sampleSynths.current.bangBoom.volume.value = 4;
+    sampleSynths.current.bangCrash.volume.value = -6;
+    sampleSynths.current.zipperNoise.volume.value = -8;
 
     recorder.current=new Tone.Recorder();
     Tone.getDestination().connect(recorder.current);
@@ -1326,6 +1500,7 @@ function App(){
     return ()=>{
       Object.values(synths.current).forEach(s=>s&&s.dispose());
       Object.values(sampleSynths.current).forEach(s=>s&&s.dispose());
+      Object.values(sampleFilters.current).forEach(f=>f&&f.dispose());
       Object.values(players.current).forEach(p=>p&&p.dispose());
       if(masterFx.current.reverb){ try{masterFx.current.reverb.dispose();}catch(e){} }
       if(masterFx.current.delay){ try{masterFx.current.delay.dispose();}catch(e){} }
@@ -1419,9 +1594,8 @@ function App(){
       // 합성 예시 사운드 (sampleId가 있으면 합성)
       const cs = customSoundsRef.current?.[id];
       if(cs?.sampleId){
-        const synth = sampleSynths.current[cs.sampleId];
         const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
-        if(synth && def){ try{ def.play(synth, time); }catch(e){} }
+        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, time); }catch(e){} }
         return;
       }
       // 녹음 sample (Player)
@@ -1445,9 +1619,8 @@ function App(){
     if(id==='my1'||id==='my2'){
       const cs = customSoundsRef.current?.[id];
       if(cs?.sampleId){
-        const synth = sampleSynths.current[cs.sampleId];
         const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
-        if(synth && def){ try{ def.play(synth, Tone.now()+0.02); }catch(e){} }
+        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, Tone.now()+0.02); }catch(e){} }
         return;
       }
       const p = players.current[id];
@@ -1508,10 +1681,9 @@ function App(){
   // 예시 사운드 단일 재생 (모달에서 들어볼 때)
   const playSampleSound = async (sampleId)=>{
     await Tone.start();
-    const synth = sampleSynths.current[sampleId];
     const def = SAMPLE_SOUNDS.find(s=>s.id===sampleId);
-    if(synth && def){
-      try{ def.play(synth, Tone.now()+0.02); }catch(e){}
+    if(def){
+      try{ def.play(sampleSynths.current, sampleFilters.current, Tone.now()+0.02); }catch(e){}
     }
   };
 
@@ -1537,10 +1709,8 @@ function App(){
         return;
       }
       // 합성 sample (clap, table 등)
-      if(sampleSynths.current[id]){
-        const def = SAMPLE_SOUNDS.find(s=>s.id===id);
-        if(def){ try{ def.play(sampleSynths.current[id], time); }catch(e){} }
-      }
+      const def = SAMPLE_SOUNDS.find(s=>s.id===id);
+      if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, time); }catch(e){} }
     });
   };
 
@@ -1593,9 +1763,8 @@ function App(){
     const cs = customSounds[slot];
     if(cs?.sampleId){
       // 합성 예시 사운드
-      const synth = sampleSynths.current[cs.sampleId];
       const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
-      if(synth && def){ try{ def.play(synth, Tone.now()+0.02); }catch(e){} }
+      if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, Tone.now()+0.02); }catch(e){} }
     } else {
       const p = players.current[slot];
       if(p && p.loaded){ try{ p.stop(); p.start(); }catch(e){} }
@@ -1825,9 +1994,9 @@ function App(){
       situation: situation? situation.name : '',
       preRecordText: session.preRecordText||'', preRecordUrl: session.preRecordUrl||'',
       preHelp: session.preHelp, preSticker: session.preSticker||'',
-      stage1Pattern: grid[0].map(c=>c?'■':'·').join(''),
+      stage1Pattern: gridToEmojiPattern(grid[0]),
       stage2Instrument: getInstObj(selectedInst)?.name||selectedInst,
-      stage3Pattern: grid.map(r=>r.map(c=>c?'■':'·').join('')).join(' / '),
+      stage3Pattern: grid.map(gridToEmojiPattern).join(' / '),
       musicUrl: [session.music1Url, session.music2Url].filter(Boolean).join(' | '),
       reflectionItems: [
         '모드: '+(mode?.label||''),
@@ -1958,11 +2127,24 @@ function App(){
 
       {/* 로그인 */}
       {view==='login' && (
-        <div className="h-full flex flex-col items-center justify-center gap-7 fade-in">
+        <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
           <div className="float text-7xl">🎵</div>
           <h1 className="t-title text-indigo-600">🎵 소리 탐험대 🎵</h1>
           <p className="t-big text-slate-500">소리를 탐색하고 나만의 음악을 만들어요</p>
-          <div className="card p-9 w-[560px] flex flex-col gap-5">
+
+          {/* 새 학생도 한눈에 알 수 있는 활동 흐름 */}
+          <div className="card p-3 w-[760px]" style={{background:'rgba(255,255,255,0.95)', border:'3px solid #c7d2fe'}}>
+            <div className="t-sm text-center text-indigo-700 font-bold mb-1">📚 이렇게 활동해요</div>
+            <div className="flex items-center justify-center gap-1 t-xs text-slate-700 flex-wrap" style={{lineHeight:1.5}}>
+              <span>🎬 모드 고르기</span><span>→</span>
+              <span>🎤 소리 모으기</span><span>→</span>
+              <span>🎵 음악 만들기</span><span>→</span>
+              <span>💭 마음 정리</span><span>→</span>
+              <span>🏆 임명장 받기</span>
+            </div>
+          </div>
+
+          <div className="card p-7 w-[560px] flex flex-col gap-4">
             <select className="w-full p-4 t-big text-center rounded-3xl bg-indigo-50 border-4 border-indigo-200 outline-none focus:border-indigo-400"
               defaultValue="" onChange={e=>setStudent(students.find(s=>String(s.no)===e.target.value))}>
               <option value="" disabled>이름을 선택하세요</option>
@@ -1973,7 +2155,7 @@ function App(){
                 if(!student){ alert('이름을 선택하세요!'); return; }
                 await Tone.start();
                 try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); }
-                catch(e){ alert('마이크 없이도 괜찮아요! 글자로 입력할 수 있어요.'); }
+                catch(e){ alert('마이크 없이도 괜찮아요! 📚 예시 사운드를 골라 쓸 수 있어요.'); }
                 // 이전 세션 검사 — 진행 중인 게 있으면 이어할지 묻기
                 const prev = loadLocalSession(student.name);
                 if(prev && prev.view && prev.view!=='login' && prev.view!=='cert'){
@@ -2105,7 +2287,7 @@ function App(){
                 녹음이 어려울 때 사용할 수 있는 소리야 · 카드를 누르면 들려줘
               </div>
             </div>
-            <div className="grid grid-cols-5 gap-3" style={{marginBottom:14}}>
+            <div className="grid grid-cols-4 gap-3" style={{marginBottom:14}}>
               {SAMPLE_SOUNDS.map(s=>{
                 const isSel = selectedSample?.id===s.id;
                 return (
@@ -2163,7 +2345,12 @@ function App(){
         <div className="h-full flex flex-col items-center justify-center gap-3 fade-in">
           <BackBtn/>
           <h2 className="t-huge text-indigo-700">오늘 어떤 활동을 할까요?</h2>
-          <p className="t-mid text-slate-500">카드를 누르면 그 모드의 소리를 들려줄게! 👂</p>
+          <div className="card px-5 py-2" style={{background:'rgba(255,255,255,0.92)'}}>
+            <div className="t-mid text-slate-600 text-center" style={{lineHeight:1.3}}>
+              ① 카드를 누르면 그 모드의 소리를 들려줘 👂<br/>
+              ② 마음에 드는 모드 고른 다음 [🚀 시작!] 을 눌러봐
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {Object.values(MODES).map(m=>{
               const sel = mode?.id===m.id;
@@ -2223,24 +2410,69 @@ function App(){
         </div>
       )}
 
-      {/* 모드 인트로 — 캐릭터 등장 (2초 후 자동 진행, 누르면 즉시) */}
+      {/* 모드 인트로 — 컨셉/느낌/활동을 친절하게 설명 */}
       {view==='modeIntro' && mode && (
-        <div className="h-full flex flex-col items-center justify-center gap-4 fade-in"
-          onClick={()=>setView('prerecord')}
-          style={{cursor:'pointer'}}>
-          <div className="mode-zoom" style={{fontSize:180, lineHeight:1}}>{mode.characterEmoji}</div>
-          <div className="card px-8 py-4 mode-zoom" style={{
+        <div className="h-full flex flex-col items-center justify-center gap-3 fade-in">
+          <BackBtn/>
+          <ModeIntroAutoPlay onPlay={()=>playModeSample(mode)}/>
+          <div className="mode-zoom" style={{fontSize:96, lineHeight:1, marginBottom:-8}}>{mode.characterEmoji}</div>
+          <div className="card px-7 py-2 mode-zoom" style={{
             background:'linear-gradient(135deg, white, '+mode.color+'22)',
-            border:'5px solid '+mode.color,
+            border:'4px solid '+mode.color,
           }}>
-            <div className="t-huge text-center" style={{color:mode.color, lineHeight:1.1}}>{mode.character}</div>
-            <div className="t-mid text-center text-slate-600" style={{marginTop:6}}>"{mode.motto}"</div>
+            <div className="t-huge text-center" style={{color:mode.color, lineHeight:1, fontSize:32}}>
+              {mode.characterEmoji} {mode.character}
+            </div>
+            <div className="t-sm text-center text-slate-500" style={{marginTop:2, fontStyle:'italic'}}>"{mode.motto}"</div>
           </div>
-          <div className="readable-light t-sm mt-2">
-            👆 화면을 누르면 시작!
+
+          {/* 다시 들어보기 버튼 — 컨셉 읽으면서 소리 다시 들음 */}
+          <button onClick={()=>playModeSample(mode)}
+            className="btn px-5 py-2 t-sm"
+            style={{background:'rgba(255,255,255,0.95)', color:mode.color, border:'2px solid '+mode.color}}>
+            🔁 이 모드 소리 다시 들어보기
+          </button>
+
+          {/* 컨셉 3카드 — 무엇 / 느낌 / 활동 */}
+          {mode.concept && (
+            <div className="grid grid-cols-3 gap-3" style={{width:1100, marginTop:4}}>
+              <div className="card p-3" style={{background:'rgba(255,255,255,0.97)', border:'3px solid '+mode.color+'66'}}>
+                <div className="t-mid font-bold mb-1" style={{color:mode.color}}>🎬 무엇을 만들까?</div>
+                <div className="t-sm text-slate-700" style={{lineHeight:1.4}}>{mode.concept.what}</div>
+              </div>
+              <div className="card p-3" style={{background:'rgba(255,255,255,0.97)', border:'3px solid '+mode.color+'66'}}>
+                <div className="t-mid font-bold mb-1" style={{color:mode.color}}>👂 어떤 느낌?</div>
+                <div className="t-sm text-slate-700" style={{lineHeight:1.4}}>{mode.concept.feeling}</div>
+              </div>
+              <div className="card p-3" style={{background:'rgba(255,255,255,0.97)', border:'3px solid '+mode.color+'66'}}>
+                <div className="t-mid font-bold mb-1" style={{color:mode.color}}>✨ 어떻게 활동?</div>
+                <div className="t-sm text-slate-700" style={{lineHeight:1.4}}>{mode.concept.activity}</div>
+              </div>
+            </div>
+          )}
+
+          {/* 활동 흐름 안내 — 학생이 "내가 무엇을 할 예정인지" 미리 보기 */}
+          <div className="card p-3" style={{width:1100, background:'rgba(254,243,199,0.92)', border:'3px solid #fbbf24'}}>
+            <div className="t-mid font-bold text-amber-900 mb-1 text-center">📚 오늘 우리가 할 활동 (순서대로)</div>
+            <div className="flex items-center justify-center gap-1 t-xs text-amber-900 flex-wrap" style={{lineHeight:1.5}}>
+              <span>🎤 내 소리 녹음</span><span>→</span>
+              <span>🎬 장면 고르기</span><span>→</span>
+              <span>🐢 빠르기</span><span>→</span>
+              <span>🥁 박자 모양</span><span>→</span>
+              <span>🎵 음악 만들기 (3단계)</span><span>→</span>
+              <span>💭 마음 정리</span><span>→</span>
+              <span>🏆 임명장 받기</span>
+            </div>
           </div>
-          {/* 2초 후 자동 진행 */}
-          <ModeIntroAutoAdvance onDone={()=>setView('prerecord')}/>
+
+          <button onClick={()=>setView('prerecord')}
+            className="btn text-white t-huge px-12 py-3"
+            style={{boxShadow:'0 6px 18px '+mode.color+'66', background:mode.color}}>
+            🚀 시작!
+          </button>
+          <div className="readable-light t-xs">
+            준비 됐어? "🚀 시작!" 을 눌러봐
+          </div>
         </div>
       )}
 
@@ -2421,9 +2653,9 @@ function App(){
       {view==='stage' && (() => {
         // 학생이 따라 할 안내 — 그리드 바로 아래 큰 글자로
         const tutorialByStage = {
-          1: { arrow:'👆', text:'위 빈 칸을 콕! 눌러봐 → 작은 북이 들어가요' },
-          2: { arrow:'👆', text:'위에서 다른 악기 한 번 눌러봐 → 박자는 그대로, 악기만 바뀜!' },
-          3: { arrow:'1️⃣', text:'위에서 악기 고르고 → 2️⃣ 빈 칸 누르면 들어가요!' },
+          1: { arrow:'👆', text:'위 빈 칸을 콕! 눌러봐  ·  (다시 누르면 빠져요)' },
+          2: { arrow:'👆', text:'위에서 다른 악기 한 번 눌러봐  ·  악기만 바뀌어요!' },
+          3: { arrow:'1️⃣', text:'위에서 악기 고르고  →  2️⃣ 빈 칸 누르면 들어가요!' },
         };
         const tutorial = tutorialByStage[stage];
         // 빈 셀이 *완전히 비어 있을 때*만 첫 클릭 유도 펄스
