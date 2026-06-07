@@ -284,7 +284,7 @@ function confetti(){
 }
 
 // 박자 그리드를 PNG 이미지로 (시트/Drive 저장용)
-function gridToImage(grid, instLookup){
+function gridToImage(grid, instLookup, volGrid){
   const ROWS = grid.length, COLS = grid[0].length;
   const cell = 70, pad = 14;
   const canvas = document.createElement('canvas');
@@ -304,15 +304,36 @@ function gridToImage(grid, instLookup){
       const id = grid[r][c];
       const x = pad + c * cell, y = 40 + r * cell;
       const inst = id ? instLookup[id] : null;
-      ctx.fillStyle = inst ? inst.color : '#f1f5f9';
-      ctx.fillRect(x+3, y+3, cell-6, cell-6);
-      ctx.strokeStyle = inst ? '#ffffff' : '#cbd5e1';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x+3, y+3, cell-6, cell-6);
-      if(inst){
+      // 강약 — soft는 가운데 작은 색 사각형, loud는 셀 가득
+      const vol = volGrid?.[r]?.[c] || 'loud';
+      const isSoft = inst && vol==='soft';
+      if(inst && isSoft){
+        // 옅은 배경 + 가운데 작은 색 사각
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(x+3, y+3, cell-6, cell-6);
+        ctx.strokeStyle = inst.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(x+3, y+3, cell-6, cell-6);
+        ctx.setLineDash([]);
+        // 작은 색 사각형 (셀의 50%)
+        const inner = cell * 0.45;
+        ctx.fillStyle = inst.color;
+        ctx.fillRect(x + (cell-inner)/2, y + (cell-inner)/2, inner, inner);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.fillText((inst.name||'').charAt(0), x + cell/2, y + cell/2 + 8);
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText((inst.name||'').charAt(0), x + cell/2, y + cell/2 + 5);
+      } else {
+        ctx.fillStyle = inst ? inst.color : '#f1f5f9';
+        ctx.fillRect(x+3, y+3, cell-6, cell-6);
+        ctx.strokeStyle = inst ? '#ffffff' : '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x+3, y+3, cell-6, cell-6);
+        if(inst){
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.fillText((inst.name||'').charAt(0), x + cell/2, y + cell/2 + 8);
+        }
       }
     }
   }
@@ -463,45 +484,51 @@ const PATTERN_EMOJI = {
 function gridToEmojiPattern(row){
   return row.map(c=>c ? (PATTERN_EMOJI[c]||'⬛') : '⬜').join('');
 }
+/* 강약(셈여림) 패턴을 별도 칼럼으로 저장
+   🔊 = 크게(loud), 🔉 = 작게(soft), ⬜ = 빈 칸
+   교사가 학생이 어디서 강약을 표현했는지 한눈에 인지 */
+function gridToVolumePattern(row, volRow){
+  return row.map((c,i)=>{
+    if(!c) return '⬜';
+    const vol = volRow?.[i] || 'loud';
+    return vol==='soft' ? '🔉' : '🔊';
+  }).join('');
+}
 
 /* ===== 예시 사운드 라이브러리 — 녹음 안 될 때 대체 ===== */
 /* ★ 자녀 테스트 결과 합성으로는 미묘한 소리가 다 비슷하게 들림.
    1-2학년이 즉시 구별 가능한 4종만 남김 (가장 다른 음역·박자감) */
 const SAMPLE_SOUNDS = [
   {id:'clap', name:'박수', emoji:'👏', desc:'짝짝짝!',
-    play:(S,F,t)=>{
-      // 양손 박수 — 두 layer가 1-3ms 차이로 trigger
+    play:(S,F,t,vel=1.0)=>{
       const offset = 0.001 + Math.random()*0.002;
-      const v1 = 0.85 + Math.random()*0.15;
-      const v2 = 0.5 + Math.random()*0.2;
+      const v1 = (0.85 + Math.random()*0.15) * vel;
+      const v2 = (0.5 + Math.random()*0.2) * vel;
       S.clapWhite?.triggerAttackRelease('32n', t, v1);
       S.clapPink?.triggerAttackRelease('16n', t+offset, v2);
     }},
   {id:'stomp', name:'발 구르기', emoji:'👣', desc:'쿵쿵쿵!',
-    play:(S,F,t)=>{
-      // thud (저음 충격) + rumble (잔향)
+    play:(S,F,t,vel=1.0)=>{
       const pitch = Math.random()<0.5 ? 'C0' : 'C1';
-      const vel = 0.9 + Math.random()*0.1;
-      S.stompThud?.triggerAttackRelease(pitch, '8n', t, vel);
-      S.stompRumble?.triggerAttackRelease('16n', t+0.005, 0.5+Math.random()*0.3);
+      const v1 = (0.9 + Math.random()*0.1) * vel;
+      const v2 = (0.5 + Math.random()*0.3) * vel;
+      S.stompThud?.triggerAttackRelease(pitch, '8n', t, v1);
+      S.stompRumble?.triggerAttackRelease('16n', t+0.005, v2);
     }},
   {id:'table', name:'책상 톡톡', emoji:'✏️', desc:'톡톡톡!',
-    play:(S,F,t)=>{
-      // wood impact + transient — 매번 살짝 다른 pitch (나무 두께 차이)
+    play:(S,F,t,vel=1.0)=>{
       const pitches = ['C3','D3','C4','E4','C5'];
       const pitch = pitches[Math.floor(Math.random()*pitches.length)];
-      S.tableWood?.triggerAttackRelease(pitch, '32n', t, 0.85+Math.random()*0.15);
-      S.tableImpact?.triggerAttackRelease('64n', t);
-      // 필터 frequency 미세 변동 (같은 책상의 다른 지점 때리는 느낌)
+      S.tableWood?.triggerAttackRelease(pitch, '32n', t, (0.85+Math.random()*0.15) * vel);
+      S.tableImpact?.triggerAttackRelease('64n', t, vel);
       if(F.tableBP){
         try{ F.tableBP.frequency.cancelScheduledValues(t); F.tableBP.frequency.setValueAtTime(550+Math.random()*300, t); }catch(e){}
       }
     }},
   {id:'snap', name:'손가락 딱', emoji:'🤏', desc:'딱딱!',
-    play:(S,F,t)=>{
-      // 짧은 air burst + tonal click
-      S.snapBurst?.triggerAttackRelease('64n', t, 0.9);
-      S.snapTone?.triggerAttackRelease('64n', t+0.0008, 0.55+Math.random()*0.2);
+    play:(S,F,t,vel=1.0)=>{
+      S.snapBurst?.triggerAttackRelease('64n', t, 0.9 * vel);
+      S.snapTone?.triggerAttackRelease('64n', t+0.0008, (0.55+Math.random()*0.2) * vel);
     }},
 ];
 const CUSTOM_COLORS = {my1:'#a78bfa', my2:'#2dd4bf'};
@@ -559,11 +586,27 @@ const getRulePatterns = (ts)=> {
 
 const STAGE_INFO = {
   1:{title:'🥁 박 만들기', short:'작은 북을 빈 칸에 콕콕! 박자를 만들어볼까?',
-     steps:['빈 칸을 한 번 누르면 작은 북이 들어가요.','같은 칸을 다시 누르면 작은 북이 빠져요.','다 만들었으면 아래 [연주 ▶] 를 눌러 들어봐요.']},
+     steps:[
+       '빈 칸을 한 번 누르면 작은 동그라미(작게 🔉) 가 들어가요.',
+       '같은 칸을 또 누르면 큰 동그라미(크게 🔊) 로 바뀌어요.',
+       '한 번 더 누르면 빠져요. (빈칸 → 작게 → 크게 → 빈칸 순서)',
+       '다 만들었으면 아래 [연주 ▶] 를 눌러 들어봐요.',
+     ]},
   2:{title:'🎵 악기 바꿔보기', short:'박자는 그대로! 악기만 바꿔보면 느낌이 달라져!',
-     steps:['위쪽에서 다른 악기를 한 번 눌러보세요.','모든 칸의 악기가 한 번에 바뀌어요.','[연주 ▶] 로 느낌이 어떻게 다른지 들어봐요.']},
-  3:{title:'✨ 자유롭게 섞기', short:'이제 진짜 음악가! 내 악기로 자유롭게 만들어봐!',
-     steps:['🔬 진짜 탐구! 넣기 전에 어떤 소리일지 입으로 먼저 상상해봐요.','악기를 고른 다음, 빈 칸을 눌러 넣어요.','한 칸 넣을 때마다 [▶ 연주]로 확인하고, 다르면 수정해봐요.','같은 칸에 다른 줄 악기를 놓으면 함께 울려요.','마음에 들면 [🎵 음악 녹음]으로 작품 저장!']},
+     steps:[
+       '위쪽에서 다른 악기를 한 번 눌러보세요.',
+       '모든 칸의 악기가 한 번에 바뀌어요. (강약은 그대로 유지)',
+       '[연주 ▶] 로 느낌이 어떻게 다른지 들어봐요.',
+     ]},
+  3:{title:'✨ 자유롭게 섞기', short:'이제 진짜 음악가! 강약도 마음대로 표현해봐!',
+     steps:[
+       '🔬 진짜 탐구! 넣기 전에 어떤 소리일지 입으로 먼저 상상해봐요.',
+       '악기를 고른 다음, 빈 칸을 눌러 넣어요. (한 번=작게, 또 누르면=크게)',
+       '한 칸 넣을 때마다 [▶ 연주]로 확인하고, 다르면 수정해봐요.',
+       '같은 칸에 다른 줄 악기를 놓으면 함께 울려요.',
+       '강약을 다르게 표현하면 더 풍부한 음악이 돼요!',
+       '마음에 들면 [🎵 음악 녹음]으로 작품 저장!',
+     ]},
 };
 
 /* ===== 모드 ===== */
@@ -1162,7 +1205,13 @@ function App(){
   const [beatHeard,setBeatHeard]=useState({}); // 박자 미리듣기 완료 여부 (4·3 각각)
   const COLS = getTSInfo(timeSig).cols;
   const newGrid = (cols)=>[Array(cols).fill(null),Array(cols).fill(null),Array(cols).fill(null)];
+  // volGrid: 각 셀의 강약 — 'loud'(큰 소리, velocity 1.0) | 'soft'(작은 소리, velocity 0.45)
+  // grid[r][c]가 truthy일 때만 volGrid[r][c]가 의미 있음
+  // 1-2학년 음악 6요소 중 '셈여림' 학습용
+  const newVolGrid = (cols)=>[Array(cols).fill('loud'),Array(cols).fill('loud'),Array(cols).fill('loud')];
+  const VEL = { loud:1.0, soft:0.45 };
   const [grid,setGrid]=useState(()=>newGrid(8));
+  const [volGrid,setVolGrid]=useState(()=>newVolGrid(8));
   const [selectedInst,setSelectedInst]=useState('drum');
   const [isPlaying,setIsPlaying]=useState(false);
   const [step,setStep]=useState(-1);
@@ -1201,7 +1250,7 @@ function App(){
   const [sampleModal,setSampleModal]=useState(null);       // null | 'my1' | 'my2'
   const [selectedSample,setSelectedSample]=useState(null); // 모달에서 미리 선택한 sample
 
-  const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), recorder=useRef(null);
+  const synths=useRef({}), loop=useRef(null), gridRef=useRef(grid), volGridRef=useRef(null), recorder=useRef(null);
   const sampleSynths=useRef({}); // 예시 사운드 합성기 (박수·발구르기·책상 등)
   const sampleFilters=useRef({}); // 예시 사운드용 필터/EQ 체인 (자연감 향상)
   const customSoundsRef=useRef({my1:null,my2:null}); // playOne/trigger에서 최신 sample 참조용
@@ -1224,6 +1273,7 @@ function App(){
 
   useEffect(()=>{ speakerRef.current=speakerOn; },[speakerOn]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
+  useEffect(()=>{ volGridRef.current=volGrid; },[volGrid]);
   useEffect(()=>{ customSoundsRef.current = customSounds; },[customSounds]);
   useEffect(()=>{ Tone.Transport.bpm.value=bpm; },[bpm]);
 
@@ -1240,7 +1290,7 @@ function App(){
       mode: mode?.id || null,
       stage, timeSig, bpm,
       situation: situation?.id || null,
-      grid,
+      grid, volGrid,
       chosenRule,
       favorites, favoriteWhy,
       pairA, pairB, pairTried,
@@ -1259,7 +1309,7 @@ function App(){
       savedAt: Date.now(),
     };
     saveLocalSession(student.name, data);
-  },[view, mode, stage, timeSig, bpm, situation, grid, chosenRule,
+  },[view, mode, stage, timeSig, bpm, situation, grid, volGrid, chosenRule,
      favorites, favoriteWhy, pairA, pairB, pairTried, reflection, session,
      customSounds, beatHeard, student, resuming]);
 
@@ -1406,9 +1456,13 @@ function App(){
       lastCol.current = col;
       Tone.Draw.schedule(()=>setStep(col),time);
       let cnt=0;
-      gridRef.current.forEach(row=>{
+      gridRef.current.forEach((row,r)=>{
         const id=row[col];
-        if(id){ cnt++; playOne(id,time); }
+        if(id){
+          cnt++;
+          const vol = volGridRef.current?.[r]?.[col] || 'loud';
+          playOne(id, time, VEL[vol]);
+        }
       });
       Tone.Draw.schedule(()=>{
         if(cnt>1) setFeedback('✨ 여러 악기가 함께! 소리가 풍부해져요!');
@@ -1417,51 +1471,61 @@ function App(){
     },seq,'8n');
   },[timeSig]);
 
-  const playOne = (id, time)=>{
+  // playOne(id, time, vel=1.0) — vel은 0~1 사이. 강(loud)=1.0, 약(soft)=0.45
+  const playOne = (id, time, vel=1.0)=>{
     if(id==='my1'||id==='my2'){
       // 합성 예시 사운드 (sampleId가 있으면 합성)
       const cs = customSoundsRef.current?.[id];
       if(cs?.sampleId){
         const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
-        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, time); }catch(e){} }
+        // 합성 sample도 velocity 반영 (Tone.js의 velocity 인자)
+        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, time, vel); }catch(e){} }
         return;
       }
-      // 녹음 sample (Player)
+      // 녹음 sample (Player) — velocity는 player.volume으로
       const p = players.current[id];
       if(p && p.loaded){
-        try{ p.start(time); }catch(e){}
+        try{
+          // vel에 따라 임시 volume 조정 (soft는 -8dB 정도)
+          if(p.volume) p.volume.value = vel<0.7 ? -8 : 0;
+          p.start(time);
+        }catch(e){}
       }
       return;
     }
     const sy = synths.current[id]; if(!sy) return;
-    if(id==='triangle') sy.triggerAttackRelease('C8','16n',time);
-    else if(id==='tambourine') sy.triggerAttackRelease('16n',time);
-    else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time);
-    else sy.triggerAttackRelease('C2','8n',time);
+    if(id==='triangle') sy.triggerAttackRelease('C8','16n',time,vel);
+    else if(id==='tambourine') sy.triggerAttackRelease('16n',time,vel);
+    else if(id==='castanets') sy.triggerAttackRelease('C5','32n',time,vel);
+    else sy.triggerAttackRelease('C2','8n',time,vel);
   };
 
   useEffect(()=>{ if(view==='stage') setShowGuide(true); },[view,stage]);
 
-  const trigger=async(id)=>{
+  // trigger(id, vel=1.0) — 1회 즉시 재생
+  const trigger=async(id, vel=1.0)=>{
     await Tone.start();
     if(id==='my1'||id==='my2'){
       const cs = customSoundsRef.current?.[id];
       if(cs?.sampleId){
         const def = SAMPLE_SOUNDS.find(s=>s.id===cs.sampleId);
-        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, Tone.now()+0.02); }catch(e){} }
+        if(def){ try{ def.play(sampleSynths.current, sampleFilters.current, Tone.now()+0.02, vel); }catch(e){} }
         return;
       }
       const p = players.current[id];
       if(p && p.loaded){
-        try{ p.start(); }catch(e){}
+        try{
+          if(p.volume) p.volume.value = vel<0.7 ? -8 : 0;
+          p.start();
+        }catch(e){}
       }
       return;
     }
     const sy=synths.current[id]; if(!sy) return;
-    if(id==='triangle') sy.triggerAttackRelease('C8','16n');
-    else if(id==='tambourine') sy.triggerAttackRelease('16n');
-    else if(id==='castanets') sy.triggerAttackRelease('C5','32n');
-    else sy.triggerAttackRelease('C2','8n');
+    if(id==='triangle') sy.triggerAttackRelease('C8','16n',undefined,vel);
+    else if(id==='tambourine') sy.triggerAttackRelease('16n',undefined,vel);
+    else if(id==='castanets') sy.triggerAttackRelease('C5','32n',undefined,vel);
+    else sy.triggerAttackRelease('C2','8n',undefined,vel);
   };
 
   const playPreset = async (pattern, instId='drum', useBpm=null)=>{
@@ -1622,20 +1686,36 @@ function App(){
     return [...chosen, ...customs];
   };
 
+  // 셀 클릭: 3단계 토글 (셈여림 학습)
+  // 빈 칸 → 작게(soft, 작은 동그라미) → 크게(loud, 큰 동그라미) → 다시 빈 칸
   const handleCell=async(r,c)=>{
     await Tone.start();
     const ng=grid.map(row=>[...row]);
+    const nv=volGrid.map(row=>[...row]);
+    const cycleVol = (curInst, curVol, newInst)=>{
+      // 빈 칸이거나 다른 악기면 새로 시작 (soft부터)
+      if(!curInst || curInst!==newInst){ return {inst:newInst, vol:'soft', trig:true}; }
+      // 같은 악기 + soft → loud
+      if(curVol==='soft'){ return {inst:newInst, vol:'loud', trig:true}; }
+      // 같은 악기 + loud → 빈 칸
+      return {inst:null, vol:'loud', trig:false};
+    };
     if(stage===1){
       if(r!==0) return;
-      if(ng[0][c]){ ng[0][c]=null; } else { ng[0][c]='drum'; trigger('drum'); }
+      const res = cycleVol(ng[0][c], nv[0][c], 'drum');
+      ng[0][c] = res.inst; nv[0][c] = res.vol;
+      if(res.trig) trigger('drum', VEL[res.vol]);
     } else if(stage===2){
       if(r!==0) return;
-      if(ng[0][c]){ ng[0][c]=null; } else { ng[0][c]=selectedInst; trigger(selectedInst); }
+      const res = cycleVol(ng[0][c], nv[0][c], selectedInst);
+      ng[0][c] = res.inst; nv[0][c] = res.vol;
+      if(res.trig) trigger(selectedInst, VEL[res.vol]);
     } else {
-      if(ng[r][c]===selectedInst){ ng[r][c]=null; }
-      else { ng[r][c]=selectedInst; trigger(selectedInst); }
+      const res = cycleVol(ng[r][c], nv[r][c], selectedInst);
+      ng[r][c] = res.inst; nv[r][c] = res.vol;
+      if(res.trig) trigger(selectedInst, VEL[res.vol]);
     }
-    setGrid(ng);
+    setGrid(ng); setVolGrid(nv);
   };
 
   const swapAllInstrument=(id)=>{
@@ -1742,6 +1822,12 @@ function App(){
       }
       return ng;
     });
+    // volGrid도 같은 차원으로 초기화 (1단계 → 2단계: 강약 유지, 새 그리드: 초기화)
+    setVolGrid(v=>{
+      const nv = newVolGrid(cols);
+      if((n===2 || n===3) && v[0]?.length===cols) nv[0] = [...v[0]];
+      return nv;
+    });
     if(n===1) setSelectedInst('drum');
     if(n===2) setSelectedInst(grid[0].find(x=>x)||'drum');
     if(n===3) setSelectedInst(pairA||favorites[0]||'tambourine');
@@ -1798,7 +1884,7 @@ function App(){
       INSTRUMENTS.forEach(i=>{ instLookup[i.id]=i; });
       if(hasSnd(customSounds.my1)) instLookup.my1 = getInstObj('my1');
       if(hasSnd(customSounds.my2)) instLookup.my2 = getInstObj('my2');
-      const dataUrl = gridToImage(grid, instLookup);
+      const dataUrl = gridToImage(grid, instLookup, volGrid);
       const b64 = dataUrl.split(',')[1];
       await api.saveRecording({
         studentName: student.name,
@@ -1823,8 +1909,10 @@ function App(){
       preRecordText: session.preRecordText||'', preRecordUrl: session.preRecordUrl||'',
       preHelp: session.preHelp, preSticker: session.preSticker||'',
       stage1Pattern: gridToEmojiPattern(grid[0]),
+      stage1Dynamics: gridToVolumePattern(grid[0], volGrid[0]),
       stage2Instrument: getInstObj(selectedInst)?.name||selectedInst,
       stage3Pattern: grid.map(gridToEmojiPattern).join(' / '),
+      stage3Dynamics: grid.map((r,i)=>gridToVolumePattern(r, volGrid[i])).join(' / '),
       musicUrl: [session.music1Url, session.music2Url].filter(Boolean).join(' | '),
       reflectionItems: [
         '모드: '+(mode?.label||''),
@@ -2029,6 +2117,7 @@ function App(){
                     if(sit) setSituation(sit);
                   }
                   if(s.grid) setGrid(s.grid);
+                  if(s.volGrid) setVolGrid(s.volGrid);
                   if(s.chosenRule) setChosenRule(s.chosenRule);
                   if(s.favorites) setFavorites(s.favorites);
                   if(s.favoriteWhy) setFavoriteWhy(s.favoriteWhy);
@@ -2480,9 +2569,9 @@ function App(){
       {view==='stage' && (() => {
         // 학생이 따라 할 안내 — 그리드 바로 아래 큰 글자로
         const tutorialByStage = {
-          1: { arrow:'👆', text:'위 빈 칸을 콕! 눌러봐  ·  (다시 누르면 빠져요)' },
-          2: { arrow:'👆', text:'위에서 다른 악기 한 번 눌러봐  ·  악기만 바뀌어요!' },
-          3: { arrow:'1️⃣', text:'위에서 악기 고르고  →  2️⃣ 빈 칸 누르면 들어가요!' },
+          1: { arrow:'👆', text:'빈 칸 콕! 작은 동그라미(작게) → 또 누르면 큰 동그라미(크게) → 또 누르면 빠져요' },
+          2: { arrow:'👆', text:'위에서 다른 악기를 누르면 악기만 바뀌어요! (강약은 그대로)' },
+          3: { arrow:'1️⃣', text:'악기 고른 다음 빈 칸 누르면 작은 소리, 또 누르면 큰 소리!' },
         };
         const tutorial = tutorialByStage[stage];
         // 빈 셀이 *완전히 비어 있을 때*만 첫 클릭 유도 펄스
@@ -2539,21 +2628,29 @@ function App(){
                 {Array.from({length:COLS}).map((_,c)=>{
                   const id=grid[r][c]; const inst=id?getInstObj(id):null;
                   const isAccent = getTSInfo(timeSig).accent[c]===1;
+                  // 강약 (셈여림): loud=큰 소리, soft=작은 소리
+                  const vol = volGrid[r]?.[c] || 'loud';
+                  const isSoft = inst && vol==='soft';
                   // 첫 빈 칸에만 펄스 유도 — 그리드 완전 비어있을 때, 첫 줄 첫 칸
                   const showPulse = allEmpty && r===0 && c===0 && !inst;
                   return (
                     <div key={c} onClick={()=>handleCell(r,c)}
-                      className={"beat-cell "+(step===c?'now':'')+(inst?' filled':'')+(showPulse?' pulse-empty':'')}
+                      className={"beat-cell "+(step===c?'now':'')+(inst?' filled':'')+(showPulse?' pulse-empty':'')+(isSoft?' soft':'')}
                       style={{
                         width: timeSig===3?160:128,
                         height:80,
-                        background: inst ? inst.color : (isAccent
-                          ? 'linear-gradient(135deg, '+mode.color+'22, '+mode.color+'33)'
-                          : 'rgba(255,255,255,0.65)'),
+                        background: inst
+                          ? (isSoft
+                              // 약: 옅은 그라데이션 + 가장자리만 inst 색
+                              ? 'linear-gradient(135deg, '+inst.color+'66, '+inst.color+'88)'
+                              : inst.color)
+                          : (isAccent
+                              ? 'linear-gradient(135deg, '+mode.color+'22, '+mode.color+'33)'
+                              : 'rgba(255,255,255,0.65)'),
                         borderColor: !inst && isAccent ? getTSInfo(timeSig).color+'aa' : (inst ? undefined : mode.color+'55'),
                         borderWidth: !inst && isAccent ? 5 : 3,
                       }}>
-                      {inst && <InstIcon type={inst.id} size={50} emoji={inst.emoji}/>}
+                      {inst && <InstIcon type={inst.id} size={isSoft?32:50} emoji={inst.emoji}/>}
                     </div>
                   );
                 })}
@@ -2586,7 +2683,12 @@ function App(){
                     if(r===0) return situation.seed.slice(0, getTSInfo(timeSig).cols);
                     return row;
                   }));
-                  setFeedback('🌱 추천 박자를 가져왔어! 마음대로 바꿔도 돼.');
+                  // 추천 박자는 모두 '크게(loud)'로 시작
+                  setVolGrid(v=>v.map((row,r)=>{
+                    if(r===0) return Array(getTSInfo(timeSig).cols).fill('loud');
+                    return row;
+                  }));
+                  setFeedback('🌱 추천 박자를 가져왔어! 강약을 바꿔보거나 마음대로 수정해도 돼.');
                   setTimeout(()=>setFeedback(''), 3500);
                 }}
                 className="btn px-4 py-2 t-sm bg-amber-300 text-amber-900">
@@ -2623,7 +2725,7 @@ function App(){
               <button onClick={downloadFinal}
                 className="btn px-6 py-3 t-mid bg-emerald-500 text-white">⬇️ 최종 작품 받기</button>
             )}
-            <button onClick={()=>setGrid(newGrid(COLS))}
+            <button onClick={()=>{ setGrid(newGrid(COLS)); setVolGrid(newVolGrid(COLS)); }}
               className="btn px-6 py-3 t-mid bg-amber-300 text-amber-900">🔁 다 지우기</button>
             {stage===1 && <button onClick={()=>setView('rule')}
               className="btn px-8 py-3 t-big bg-indigo-600 text-white">규칙 찾기 →</button>}
@@ -2973,16 +3075,23 @@ function App(){
                   </div>
                   <div className="flex flex-col" style={{gap:3}}>
                     {grid.map((row,r)=>(
-                      <div key={r} className="flex justify-center" style={{gap:3}}>
+                      <div key={r} className="flex justify-center items-center" style={{gap:3}}>
                         {row.map((c,i)=>{
                           const inst = c ? getInstObj(c) : null;
                           const isAccent = getTSInfo(timeSig).accent[i]===1;
-                          return <div key={i} className="beat-mini-cell"
+                          const vol = volGrid[r]?.[i] || 'loud';
+                          const isSoft = inst && vol==='soft';
+                          // 강(loud)=꽉 찬 셀, 약(soft)=작은 점만 가운데
+                          return <div key={i} className="beat-mini-cell flex items-center justify-center"
                             style={{
-                              background: inst ? inst.color : (isAccent?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.45)'),
-                              border: inst ? '2px solid white' : (isAccent?'2px solid '+getTSInfo(timeSig).color+'66':'2px dashed #cbd5e1'),
-                              boxShadow: inst ? '0 2px 4px rgba(0,0,0,0.12)' : 'none'
-                            }}/>;
+                              background: inst
+                                ? (isSoft ? 'rgba(255,255,255,0.6)' : inst.color)
+                                : (isAccent?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.45)'),
+                              border: inst ? (isSoft ? '2px dashed '+inst.color : '2px solid white') : (isAccent?'2px solid '+getTSInfo(timeSig).color+'66':'2px dashed #cbd5e1'),
+                              boxShadow: inst && !isSoft ? '0 2px 4px rgba(0,0,0,0.12)' : 'none'
+                            }}>
+                            {isSoft && <div style={{width:'45%',height:'45%',borderRadius:'50%',background:inst.color}}/>}
+                          </div>;
                         })}
                       </div>
                     ))}
@@ -3038,7 +3147,7 @@ function App(){
               <button className="btn bg-emerald-500 text-white px-8 py-3 t-big"
                 onClick={()=>{
                   setView('login'); setStudent(null); setMode(null); setSituation(null);
-                  setStage(1); setTimeSig(4); setBeatHeard({}); setGrid(newGrid(8));
+                  setStage(1); setTimeSig(4); setBeatHeard({}); setGrid(newGrid(8)); setVolGrid(newVolGrid(8));
                   setMusicTakes([]); setMusicHeard(false); setFinalWork(null);
                   setFavorites([]); setFavoriteWhy(''); setPairA(null); setPairB(null); setPairTried([]);
                   setChosenRule(null); setReflection([]); setSession({}); setGroupWorks([]);
